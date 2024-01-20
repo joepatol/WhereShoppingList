@@ -9,8 +9,8 @@ import (
 )
 
 type Product struct {
-	Name	string	`json:"Price"`
-	Price	float32	`json:"Name"`
+	Name	string	`json:"name"`
+	Price	float32	`json:"price"`
 }
 
 const CONN_URL = "postgres://postgresuser:postgrespwd@localhost:5432/supermarkt";
