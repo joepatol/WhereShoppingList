@@ -29,6 +29,7 @@ impl ConfigBuilder<HasUInt> {
     } 
 }
 
+#[derive(Debug)]
 pub struct ScrapeConfig {
     pub max_items: Option<u32>,
 }

@@ -1,5 +1,5 @@
 use sqlx::{PgPool, Row};
-use scrape_core::ProductInfo;
+use scrape_core::{ProductInfo, InDbProduct};
 
 const CONN_URL: &str = "postgres://postgresuser:postgrespwd@localhost:5432/supermarkt";
 
@@ -7,12 +7,13 @@ pub async fn connect() -> PgPool {
     PgPool::connect(CONN_URL).await.unwrap()
 }
 
-pub async fn insert_product(product: &ProductInfo, pool: &PgPool) {
-    let query = "INSERT INTO products (name, price) VALUES ($1, $2)";
+pub async fn insert_product(product: &InDbProduct, pool: &PgPool) {
+    let query = "INSERT INTO products (name, price, store) VALUES ($1, $2, $3)";
 
     sqlx::query(query)
-        .bind(&product.name)
-        .bind(&product.price)
+        .bind(&product.info.name)
+        .bind(&product.info.price)
+        .bind(&product.store)
         .execute(pool)
         .await
         .unwrap();

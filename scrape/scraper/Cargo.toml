@@ -12,3 +12,4 @@ sql = { path = "../sql" }
 tokio = { version = "1", features = ["full"] }
 thiserror = "1"
 anyhow = "1"
+scraper = "0.18.1"

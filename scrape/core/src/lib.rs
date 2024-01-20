@@ -1,15 +1,11 @@
-mod product_info;
+mod data;
 mod error;
 mod config;
+mod req;
+mod interface;
 
-use scraper::Html;
-use reqwest;
-
+pub use error::ScrapeError;
+pub use interface::Scraper;
+pub use req::get_html_document;
 pub use config::{ConfigBuilder, ScrapeConfig};
-pub use product_info::ProductInfo;
-
-pub async fn get_html_document(url: &str) -> Html {
-    let response = reqwest::get(url).await;
-    let html_content = response.unwrap().text().await.unwrap();
-    scraper::Html::parse_document(&html_content)
-}
+pub use data::{ProductInfo, InDbProduct};

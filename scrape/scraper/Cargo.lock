@@ -1379,6 +1379,7 @@ dependencies = [
  "anyhow",
  "jumbo",
  "scrape_core",
+ "scraper",
  "sql",
  "thiserror",
  "tokio",
@@ -1429,6 +1430,7 @@ name = "scrape_core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "futures",
  "reqwest",
  "scraper",
  "thiserror",
