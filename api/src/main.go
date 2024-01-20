@@ -1,29 +1,21 @@
-package main;
+package main
 
-const CONN_URL = "postgres://postgresuser:postgrespwd@localhost:5432/supermarkt";
-
-type MyStruct struct {
-	a float32
-	b float32
-	c float32
-}
-
-func structMethod(s MyStruct) float32 {
-	return s.c
-}
+import (
+	"net/http"
+	
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
 
 func main() {
-	var x float32 = 3.0
-
-	var y float32 = 3.3
-
-	var z = add(x, y)
-	
-	var theStruct = MyStruct{a: x, b: y, c: z}
-
-	println(structMethod(theStruct))
+    router := gin.Default()
+    router.GET("/all_products", getProducts)
+    router.Run("localhost:8080")
 }
 
-func add(a float32, b float32) float32 {
-	return a + b
+func getProducts(c *gin.Context) {
+	var pool *pgxpool.Pool = connectDb()
+	defer pool.Close()
+	var products []Product = getProductsFromDb(pool)
+    c.IndentedJSON(http.StatusOK, products)
 }
