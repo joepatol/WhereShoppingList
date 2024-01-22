@@ -33,5 +33,10 @@ pub enum DbError {
     #[error("Failed to connect to DB. Message: {err}")]
     FailedToConnect {
         err: String
-    }
+    },
+    #[error("Query '{query}' failed. Message: {err}")]
+    QueryFailed {
+        query: String,
+        err: String,
+    },
 }

@@ -4,7 +4,7 @@ use funcs::scrape;
 use scrape_core::connectors::get_html_document_from_url;
 use scrape_core::ConfigBuilder;
 
-const MAX_ITEMS_PER_SCRAPE: u32 = 48;
+const MAX_ITEMS_PER_SCRAPE: u32 = 100;
 
 #[tokio::main]
 async fn main() {

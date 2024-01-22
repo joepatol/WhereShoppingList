@@ -6,6 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sqlx = { version="0.7.3", features=["postgres", "runtime-tokio"] }
+sqlx = { version = "0.7.3", features = ["postgres", "runtime-tokio"] }
 anyhow = "1"
 scrape_core = { path = "../core" }
