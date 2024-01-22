@@ -1,4 +1,4 @@
 mod jumbo_scraper;
-mod utils;
+mod parse;
 
 pub use jumbo_scraper::JumboScraper;

@@ -1,11 +1,11 @@
 mod data;
 mod error;
 mod config;
-mod req;
 mod interface;
+pub mod connectors;
+pub mod scrape_utils;
 
-pub use error::ScrapeError;
+pub use error::{ScrapeError, DbError};
 pub use interface::Scraper;
-pub use req::get_html_document;
 pub use config::{ConfigBuilder, ScrapeConfig};
 pub use data::{ProductInfo, InDbProduct};

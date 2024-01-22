@@ -8,6 +8,10 @@ impl InDbProduct {
     pub fn new(store: String, info: ProductInfo) -> Self {
         Self { store, info }
     }
+
+    pub fn db_search_string(&self) -> String {
+        self.info.name.to_lowercase()
+    }
 }
 
 #[derive(Debug)]
