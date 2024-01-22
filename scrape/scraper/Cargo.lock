@@ -1381,7 +1381,6 @@ dependencies = [
  "scrape_core",
  "scraper",
  "sql",
- "thiserror",
  "tokio",
 ]
 

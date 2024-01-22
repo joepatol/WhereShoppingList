@@ -6,7 +6,7 @@ use scrape_core::ConfigBuilder;
 
 const MAX_ITEMS_PER_SCRAPE: u32 = 100;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 6)]
 async fn main() {
     let config = 
         ConfigBuilder::new()
