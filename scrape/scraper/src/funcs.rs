@@ -7,11 +7,7 @@ use sql::{tables, self};
 use anyhow::Result;
 use scrape_core::{InDbProduct, ScrapeConfig};
 
-pub async fn scrape<T: Future<Output = Result<Html>>>(
-    config: &ScrapeConfig, 
-    connector_func: fn(String) -> T,
-    rate_limiter: &RateLimiter,
-) -> Result<()> {
+pub async fn scrape<T: Future<Output = Result<Html>>>(config: &ScrapeConfig, connector_func: fn(String) -> T) -> Result<()> {
     println!("Starting scrape...");
     println!("Setting up SqlPool connection");
     let pool = sql::connect().await?;
@@ -21,7 +17,8 @@ pub async fn scrape<T: Future<Output = Result<Html>>>(
     println!("Assembling scrapers...");
     let scrapers = build_scrapers(connector_func);
     println!("Scraping...");
-    let db_products = run_scrapers(&config, scrapers, rate_limiter).await?;
+    let rate_limiter = RateLimiter::new(config.max_concurrent_requests);
+    let db_products = run_scrapers(&config, scrapers, &rate_limiter).await?;
     println!("Writing new scrapes to db...");
     tables::products::insert(&db_products, &pool).await?;
     println!("All done");

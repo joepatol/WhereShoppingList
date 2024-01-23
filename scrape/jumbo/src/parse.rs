@@ -9,7 +9,7 @@ use scrape_core::scrape_utils::{
     build_selectors,
 };
 
-pub fn get_nr_pages(document: &Html) -> Result<u32> {
+pub fn get_nr_pages(document: &Html) -> Result<usize> {
     let selector_strings = [
         "div.pagination",
         "div.pages-grid",

@@ -5,7 +5,7 @@ use scrape_core::{ScrapeConfig, Scraper, ProductInfo, RateLimiter};
 use scrape_core::scrape_utils::build_selector;
 use super::parse::{get_name, get_price, get_nr_pages};
 
-const PRODUCTS_PER_PAGE: u32 = 24;
+const PRODUCTS_PER_PAGE: usize = 24;
 const URL: &str = "https://www.jumbo.com/producten";
 const OFFSET_URL: &str = "/?offSet=";
 const SRC: &str = "Jumbo";
@@ -47,7 +47,7 @@ impl<T: Future<Output = Result<Html>>> JumboScraper<T> {
 
 impl<T: Future<Output = Result<Html>>> Scraper for JumboScraper<T> {
     async fn scrape(&self, cfg: &ScrapeConfig, rate_limiter: &RateLimiter) -> Result<Vec<ProductInfo>> {
-        let max_nr_products: u32;
+        let max_nr_products: usize;
     
         match cfg.max_items {
             Some(value) => max_nr_products = value,
