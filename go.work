@@ -1,0 +1,5 @@
+go 1.21.6
+
+use ./api/src
+use ./api/src/db
+use ./api/src/controller
