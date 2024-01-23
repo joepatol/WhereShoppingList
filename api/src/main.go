@@ -2,31 +2,44 @@ package main
 
 import (
 	"net/http"
+	"db"
+	"controller"
 	
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type Depends struct {
+	ConnPool *pgxpool.Pool
+}
+
 func main() {
     router := gin.Default()
-    router.GET("/all_products", getProducts)
-	router.GET("/find_products", findProducts)
+	var pool *pgxpool.Pool = db.ConnectDb()
+	defer pool.Close()
+	deps := Depends{ ConnPool: pool }
+
+    router.GET("/all_products", deps.getProducts)
+	router.GET("/find_products", deps.findProducts)
     router.Run("localhost:8080")
 }
 
-func findProducts(ctx *gin.Context) {
-	var pool *pgxpool.Pool = connectDb()
-	defer pool.Close()
-
+func (deps *Depends) findProducts(ctx *gin.Context) {
 	word := ctx.Param("word")
 
-	var products []Product = findProductsInDb(pool, word)
-	ctx.IndentedJSON(http.StatusOK, products)
+	products, err := controller.FindProductsInDb(deps.ConnPool, word)
+	if err != nil {
+		ctx.Status(http.StatusInternalServerError)
+	} else {
+		ctx.IndentedJSON(http.StatusOK, products)
+	}
 }
 
-func getProducts(ctx *gin.Context) {
-	var pool *pgxpool.Pool = connectDb()
-	defer pool.Close()
-	var products []Product = getProductsFromDb(pool)
-    ctx.IndentedJSON(http.StatusOK, products)
+func (deps *Depends) getProducts(ctx *gin.Context) {
+	products, err := controller.GetProductsFromDb(deps.ConnPool)
+	if err != nil {
+		ctx.Status(http.StatusInternalServerError)
+	} else {
+		ctx.IndentedJSON(http.StatusOK, products)
+	}
 }
