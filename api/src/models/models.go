@@ -5,5 +5,5 @@ type Product struct {
 	Name		string
 	Store 		string
 	Price 		float32
-	Searchstr 	string
+	SearchStr 	string `gorm:"column:searchstr"`
 }
