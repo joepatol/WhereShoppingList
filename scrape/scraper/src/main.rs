@@ -7,7 +7,7 @@ use scrape_core::{ConfigBuilder, RateLimiter};
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     let config = ConfigBuilder::new().build();
-    let rate_limiter = RateLimiter::new(2000);
+    let rate_limiter = RateLimiter::new(100);
     scrape(
         &config, 
         get_html_document_from_url,
