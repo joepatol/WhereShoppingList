@@ -18,17 +18,10 @@ pub mod products {
                 $4::VARCHAR(255)[]
             )";
 
-        let mut names = Vec::new();
-        let mut prices = Vec::new();
-        let mut stores = Vec::new();
-        let mut search_strings = Vec::new();
-
-        for product in products.iter() {
-            names.push(product.info.name.clone());
-            prices.push(product.info.price.clone());
-            stores.push(product.store.clone());
-            search_strings.push(product.db_search_string());
-        }
+        let names: Vec<&str> = products.iter().map(|p| p.info.name.as_str()).collect();
+        let prices: Vec<f32> = products.iter().map(|p| p.info.price).collect();
+        let stores: Vec<&str> = products.iter().map(|p| p.store.as_str()).collect();
+        let search_strings: Vec<String> = products.iter().map(|p| p.db_search_string()).collect();
         
         sqlx::query_as::<_, ()>(query_str)
             .bind(names)
@@ -44,26 +37,31 @@ pub mod products {
         Ok(())
     }
 
-    pub async fn insert_one(product: &InDbProduct, pool: &PgPool) {
-        let query = "INSERT INTO products (name, price, store, searchstr) VALUES ($1, $2, $3, &4)";
+    pub async fn insert_one(product: &InDbProduct, pool: &PgPool) -> Result<()>{
+        let query_str = "INSERT INTO products (name, price, store, searchstr) VALUES ($1, $2, $3, &4)";
     
-        sqlx::query(query)
+        sqlx::query(query_str)
             .bind(&product.info.name)
             .bind(&product.info.price)
             .bind(&product.store)
             .bind(&product.db_search_string())
             .execute(pool)
             .await
-            .unwrap();
-    }
+            .map_err(|e| DbError::QueryFailed{ 
+                query: query_str.to_string(),
+                err: e.to_string()
+            })?;
+        Ok(())
+    }   
     
     pub async fn truncate(pool: &PgPool) -> Result<()> {
-        let query = "TRUNCATE TABLE products";
-        sqlx::query(query)
+        let query_str = "TRUNCATE TABLE products";
+
+        sqlx::query(query_str)
             .execute(pool)
             .await
             .map_err(|e| DbError::QueryFailed { 
-                query: query.to_string(),
+                query: query_str.to_string(),
                 err: e.to_string(), 
         })?;
         Ok(())

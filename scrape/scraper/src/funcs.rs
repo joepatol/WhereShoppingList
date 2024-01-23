@@ -7,20 +7,22 @@ use sql::{tables, self};
 use anyhow::Result;
 use scrape_core::{InDbProduct, ScrapeConfig};
 
-pub async fn scrape<T: Future<Output = Result<Html>>>(config: &ScrapeConfig, connector_func: fn(String) -> T) {
+pub async fn scrape<T: Future<Output = Result<Html>>>(config: &ScrapeConfig, connector_func: fn(String) -> T) -> Result<()> {
     println!("Starting scrape...");
     println!("Setting up SqlPool connection");
-    let pool = sql::connect().await.unwrap();
+    let pool = sql::connect().await?;
     println!("Using configuration: {:?}", &config);
     println!("Clearing tables");
-    tables::products::truncate(&pool).await.unwrap();
+    tables::products::truncate(&pool).await?;
     println!("Assembling scrapers...");
     let scrapers = build_scrapers(connector_func);
     println!("Scraping...");
-    let db_products = run_scrapers(&config, scrapers).await.unwrap();
+    let db_products = run_scrapers(&config, scrapers).await?;
     println!("Writing new scrapes to db...");
-    tables::products::insert(&db_products, &pool).await.unwrap();
+    tables::products::insert(&db_products, &pool).await?;
     println!("All done");
+    pool.close().await;
+    Ok(())
 }
 
 fn build_scrapers<T: Future<Output = Result<Html>>>(connector_func: fn(String) -> T) -> HashMap<&'static str, impl Scraper> {

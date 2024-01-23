@@ -4,14 +4,8 @@ use funcs::scrape;
 use scrape_core::connectors::get_html_document_from_url;
 use scrape_core::ConfigBuilder;
 
-const MAX_ITEMS_PER_SCRAPE: u32 = 100;
-
 #[tokio::main(flavor = "multi_thread", worker_threads = 6)]
 async fn main() {
-    let config = 
-        ConfigBuilder::new()
-        .scrape_max_items(MAX_ITEMS_PER_SCRAPE)
-        .build();
-
-    scrape(&config, get_html_document_from_url).await;
+    let config = ConfigBuilder::new().build();
+    scrape(&config, get_html_document_from_url).await.unwrap();
 }

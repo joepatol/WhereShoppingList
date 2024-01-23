@@ -11,9 +11,7 @@ impl ConfigBuilder<HasNot> {
     pub fn new() -> ConfigBuilder<HasNot> {
         ConfigBuilder { max_items: HasNot }
     }
-}
 
-impl ConfigBuilder<HasNot> {
     pub fn scrape_max_items(self, amt: u32) -> ConfigBuilder<HasUInt> {
         ConfigBuilder { max_items: Has { 0: amt } }
     }

@@ -54,7 +54,6 @@ impl<T: Future<Output = Result<Html>>> Scraper for JumboScraper<T> {
             Some(value) => max_nr_products = value,
             None => {
                 let document = (self.html_fetcher)(URL.to_string()).await?;
-                // TODO: Fix get nr pages
                 let nr_pages = get_nr_pages(&document)?;
                 max_nr_products = nr_pages * PRODUCTS_PER_PAGE
             },

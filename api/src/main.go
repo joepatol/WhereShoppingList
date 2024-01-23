@@ -10,12 +10,23 @@ import (
 func main() {
     router := gin.Default()
     router.GET("/all_products", getProducts)
+	router.GET("/find_products", findProducts)
     router.Run("localhost:8080")
 }
 
-func getProducts(c *gin.Context) {
+func findProducts(ctx *gin.Context) {
+	var pool *pgxpool.Pool = connectDb()
+	defer pool.Close()
+
+	word := ctx.Param("word")
+
+	var products []Product = findProductsInDb(pool, word)
+	ctx.IndentedJSON(http.StatusOK, products)
+}
+
+func getProducts(ctx *gin.Context) {
 	var pool *pgxpool.Pool = connectDb()
 	defer pool.Close()
 	var products []Product = getProductsFromDb(pool)
-    c.IndentedJSON(http.StatusOK, products)
+    ctx.IndentedJSON(http.StatusOK, products)
 }
