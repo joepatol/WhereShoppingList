@@ -1,40 +1,27 @@
 package controller
 
 import (
-	"context"
-	"db"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"models"
+	"gorm.io/gorm"
 )
 
-func FindProductsInDb(pool *pgxpool.Pool, word string) ([]db.Product, error) {
-	var query = "SELECT name, price, store FROM products WHERE searchstr LIKE '%' || LOWER($1) || '%'"
+// func FindProductsInDb(db *gorm.DB, word string) ([]models.Product, error) {
+// 	var query = "SELECT name, price, store FROM products WHERE searchstr @> $1"
 
-	rows, err := pool.Query(context.Background(), query, word)
-	if err != nil { return nil, err }
-	products, err := parseQueryResult(rows)
-	if err != nil { return nil, err }
-	return products, nil
-}
+// 	words := []string{ word }
 
-func GetProductsFromDb(pool *pgxpool.Pool) ([]db.Product, error) {
-	var query = "SELECT name, price, store FROM products"
+// 	rows, err := db.Query(context.Background(), query, words)
+// 	if err != nil { return nil, err }
+// 	products, err := parseQueryResult(rows)
+// 	if err != nil { return nil, err }
+// 	return products, nil
+// }
 
-	rows, err := pool.Query(context.Background(), query)
-	if err != nil { return nil, err }
-	products, err := parseQueryResult(rows)
-	if err != nil { return nil, err }
-	return products, nil
-}
+func GetProductsFromDb(db *gorm.DB) ([]models.Product, error) {
+	var products []models.Product
 
-func parseQueryResult(rows pgx.Rows) ([]db.Product, error) {
-	var products []db.Product
-	for rows.Next() {
-		var product db.Product
-		err := rows.Scan(&product.Name, &product.Price, &product.Store)
-		if err != nil {return nil, err}
-		products = append(products, product)
-	}
+	result := db.Find(&products)
+	if result.Error != nil { return nil, result.Error }
+
 	return products, nil
 }

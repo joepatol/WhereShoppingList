@@ -1,5 +1,7 @@
 go 1.21.6
 
 use ./api/src
-use ./api/src/db
+use ./api/src/models
 use ./api/src/controller
+use ./api/src/dto
+use ./api/src/db

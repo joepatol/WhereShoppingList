@@ -791,7 +791,6 @@ name = "jumbo"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "futures",
  "reqwest",
  "scrape_core",
  "scraper",

@@ -1,8 +1,7 @@
-use futures::future::join_all;
 use scraper::Html;
 use anyhow::Result;
 use std::future::Future;
-use scrape_core::{ScrapeConfig, Scraper, ProductInfo};
+use scrape_core::{ScrapeConfig, Scraper, ProductInfo, RateLimiter};
 use scrape_core::scrape_utils::build_selector;
 use super::parse::{get_name, get_price, get_nr_pages};
 
@@ -29,7 +28,7 @@ impl<T: Future<Output = Result<Html>>> JumboScraper<T> {
         for slice in [URL, OFFSET_URL, &offset] {
             url.push_str(slice);
         }
-        let document = (self.html_fetcher)(url).await?;
+        let document = (self.html_fetcher)(url.clone()).await?;
     
         let selector = build_selector("article.product-container", &src())?;
         let html_products = document.select(&selector);
@@ -47,7 +46,7 @@ impl<T: Future<Output = Result<Html>>> JumboScraper<T> {
 }
 
 impl<T: Future<Output = Result<Html>>> Scraper for JumboScraper<T> {
-    async fn scrape(&self, cfg: &ScrapeConfig) -> Result<Vec<ProductInfo>> {
+    async fn scrape(&self, cfg: &ScrapeConfig, rate_limiter: &RateLimiter) -> Result<Vec<ProductInfo>> {
         let max_nr_products: u32;
     
         match cfg.max_items {
@@ -58,22 +57,14 @@ impl<T: Future<Output = Result<Html>>> Scraper for JumboScraper<T> {
                 max_nr_products = nr_pages * PRODUCTS_PER_PAGE
             },
         };
-    
+        
         let mut loaded_nr_products = 0;
         let mut futures = Vec::new();
     
         while loaded_nr_products < max_nr_products {
             futures.push(self.scrape_page(loaded_nr_products.to_string()));
             loaded_nr_products += PRODUCTS_PER_PAGE;
-        };
-        
-        Ok(join_all(futures)
-            .await
-            .into_iter()
-            .collect::<Result<Vec<Vec<ProductInfo>>>>()?
-            .into_iter()
-            .flatten()
-            .collect()
-        )
+        }
+        Ok(rate_limiter.run(futures).await?)
     }
 }

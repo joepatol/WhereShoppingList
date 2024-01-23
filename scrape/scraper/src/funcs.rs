@@ -2,12 +2,16 @@ use std::collections::HashMap;
 use scraper::Html;
 use std::future::Future;
 use jumbo::JumboScraper;
-use scrape_core::Scraper;
+use scrape_core::{RateLimiter, Scraper};
 use sql::{tables, self};
 use anyhow::Result;
 use scrape_core::{InDbProduct, ScrapeConfig};
 
-pub async fn scrape<T: Future<Output = Result<Html>>>(config: &ScrapeConfig, connector_func: fn(String) -> T) -> Result<()> {
+pub async fn scrape<T: Future<Output = Result<Html>>>(
+    config: &ScrapeConfig, 
+    connector_func: fn(String) -> T,
+    rate_limiter: &RateLimiter,
+) -> Result<()> {
     println!("Starting scrape...");
     println!("Setting up SqlPool connection");
     let pool = sql::connect().await?;
@@ -17,7 +21,7 @@ pub async fn scrape<T: Future<Output = Result<Html>>>(config: &ScrapeConfig, con
     println!("Assembling scrapers...");
     let scrapers = build_scrapers(connector_func);
     println!("Scraping...");
-    let db_products = run_scrapers(&config, scrapers).await?;
+    let db_products = run_scrapers(&config, scrapers, rate_limiter).await?;
     println!("Writing new scrapes to db...");
     tables::products::insert(&db_products, &pool).await?;
     println!("All done");
@@ -31,11 +35,15 @@ fn build_scrapers<T: Future<Output = Result<Html>>>(connector_func: fn(String) -
     ])
 }
 
-async fn run_scrapers(cfg: &ScrapeConfig, scrapers: HashMap<&'static str, impl Scraper>) -> Result<Vec<InDbProduct>> {
+async fn run_scrapers(
+    cfg: &ScrapeConfig, 
+    scrapers: HashMap<&'static str, impl Scraper>,
+    rate_limiter: &RateLimiter,
+) -> Result<Vec<InDbProduct>> {
     let mut db_products: Vec<InDbProduct> = Vec::new();
     for (scraper_name, scraper) in scrapers.iter() {
         println!("Scraping '{}'", scraper_name);
-        let products = scraper.scrape(cfg).await?;
+        let products = scraper.scrape(cfg, rate_limiter).await?;
         let in_db_products = 
             products
             .into_iter()
