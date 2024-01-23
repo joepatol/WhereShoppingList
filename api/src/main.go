@@ -17,9 +17,8 @@ type Depends struct {
 
 func main() {
     router := gin.Default()
-	var database *gorm.DB = db.ConnectDb()
 	deps := Depends{ 
-		Database: database,
+		Database: db.ConnectDb(),
 		Logger: log.Default(),
 	}
 

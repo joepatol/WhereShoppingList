@@ -1,12 +1,7 @@
-.vscode
-.venv
-**/data
-**/target
-.sqlx
-
 .DS_Store
 node_modules
 /dist
+
 
 # local env files
 .env.local
