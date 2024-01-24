@@ -11,3 +11,8 @@ services:
       POSTGRES_DB: supermarkt
     ports:
       - 5432:5432
+  func:
+    container_name: supermarkt-func
+    build: ./scraper
+    ports:
+      - 7071:7071
