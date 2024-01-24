@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use scraper::Html;
+use simple_logger::SimpleLogger;
 use std::future::Future;
 use jumbo::JumboScraper;
 use scrape_core::{RateLimiter, Scraper};
@@ -28,7 +29,7 @@ pub async fn scrape<T: Future<Output = Result<Html>> + Send>(config: &ScrapeConf
 
 fn build_scrapers<T: Future<Output = Result<Html>> + Send>(connector_func: fn(String) -> T) -> HashMap<&'static str, impl Scraper> {
     HashMap::from([
-        ("Jumbo", JumboScraper::new(connector_func))
+        ("Jumbo", JumboScraper::new(connector_func, SimpleLogger::new()))
     ])
 }
 
@@ -40,7 +41,7 @@ async fn run_scrapers(
     let mut db_products: Vec<InDbProduct> = Vec::new();
     for (scraper_name, scraper) in scrapers.iter() {
         println!("Scraping '{}'", scraper_name);
-        let products = scraper.scrape(cfg, rate_limiter).await?;
+        let products = scraper.scrape(cfg.max_items, rate_limiter).await?;
         let in_db_products = 
             products
             .into_iter()

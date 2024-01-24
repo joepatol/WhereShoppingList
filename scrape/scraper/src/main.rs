@@ -11,9 +11,8 @@ type Result<T> = std::result::Result<T, Rejection>;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
+    println!("Did at least something");
     let route = warp::get()
-        // Warp path needs to match Azure functions URL
-        .and(warp::path("api"))
         .and(warp::path("scrapeFunc"))
         .and_then(handler);
 

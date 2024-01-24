@@ -1,5 +1,12 @@
 version: '3.9'
 services:
+  storage:
+    image: "mcr.microsoft.com/azure-storage/azurite"
+    hostname: azurite
+    ports:
+      - 10000:10000
+      - 10001:10001
+      - 10002:10002
   db:
     container_name: supermarkt-db
     build: ./db
@@ -16,3 +23,6 @@ services:
     build: ./scrape
     ports:
       - 7071:7071
+    depends_on:
+      - storage
+      - db

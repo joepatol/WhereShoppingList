@@ -1,3 +1,4 @@
 #!/bin/sh
 
-func start
+func extensions install
+func start --verbose

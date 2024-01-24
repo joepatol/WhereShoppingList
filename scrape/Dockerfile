@@ -26,5 +26,6 @@ RUN cargo build --release
 
 # Run
 EXPOSE 7071
+EXPOSE 46075
 RUN chmod +x run.sh
 CMD ["sh", "/func/scraper/run.sh"]
