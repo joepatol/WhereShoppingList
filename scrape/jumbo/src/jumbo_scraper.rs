@@ -14,11 +14,12 @@ pub fn src() -> String {
     SRC.to_string()
 }
 
-pub struct JumboScraper<T: Future<Output = Result<Html>>> {
+#[derive(Clone)]
+pub struct JumboScraper<T: Future<Output = Result<Html>> + Send> {
     pub html_fetcher: fn(String) -> T,
 }
 
-impl<T: Future<Output = Result<Html>>> JumboScraper<T> {
+impl<T: Future<Output = Result<Html>> + Send> JumboScraper<T> {
     pub fn new(fetch_func: fn(String) -> T) -> Self {
         Self { html_fetcher: fetch_func }
     }
@@ -45,7 +46,7 @@ impl<T: Future<Output = Result<Html>>> JumboScraper<T> {
     }
 }
 
-impl<T: Future<Output = Result<Html>>> Scraper for JumboScraper<T> {
+impl<T: Future<Output = Result<Html>> + Send> Scraper for JumboScraper<T> {
     async fn scrape(&self, cfg: &ScrapeConfig, rate_limiter: &RateLimiter) -> Result<Vec<ProductInfo>> {
         let max_nr_products: usize;
     

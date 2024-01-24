@@ -16,3 +16,4 @@ sql = { path = "../sql" }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
 scraper = "0.18.1"
+warp = "0.3"

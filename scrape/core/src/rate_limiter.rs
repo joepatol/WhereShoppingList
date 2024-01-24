@@ -11,17 +11,23 @@ impl RateLimiter {
         Self { concurrent_requests }
     }
     
-    pub async fn run<T>(&self, futures: Vec<impl Future<Output = Result<Vec<T>>>>) -> Result<Vec<T>> {
+    pub async fn run<T>(&self, futures: Vec<impl Future<Output = Result<Vec<T>>> + Send>) -> Result<Vec<T>> {
         match self.concurrent_requests {
             Some(limit) => Ok(RateLimiter::run_with_limit(futures, limit).await?),
             None => Ok(RateLimiter::run_batch(futures).await?)
         }
     }
 
-    async fn run_with_limit<T>(futures: Vec<impl Future<Output = Result<Vec<T>>>>, limit: usize) -> Result<Vec<T>> {
-        let mut cur_limit: usize = limit;
+    async fn run_with_limit<T>(futures: Vec<impl Future<Output = Result<Vec<T>>> + Send>, limit: usize) -> Result<Vec<T>> {
+        // TODO: make this method nicer, problem with below code is that it's not Send and/or Sync
+        // NOTE: it requires itertools crate itertools = "0.12.0"
+        // for batch in futures.into_iter().chunks(limit).into_iter() {
+        //     result.extend(RateLimiter::run_batch(batch.collect::<Vec<_>>()).await?);
+        // }
+
         let mut result = Vec::new();
         let mut batch = Vec::new();
+        let mut cur_limit = limit;
 
         for (nr_loaded, future) in futures.into_iter().enumerate() {
             batch.push(future);
@@ -29,14 +35,15 @@ impl RateLimiter {
             if nr_loaded == cur_limit {
                 result.extend(RateLimiter::run_batch(batch).await?);
                 batch = Vec::new();
-                cur_limit += limit;
+                cur_limit += limit
             }
-        };
+        }
         result.extend(RateLimiter::run_batch(batch).await?);
+
         Ok(result)
     }
 
-    async fn run_batch<T>(futures: Vec<impl Future<Output = Result<Vec<T>>>>) -> Result<Vec<T>> {
+    async fn run_batch<T>(futures: Vec<impl Future<Output = Result<Vec<T>>> + Send>) -> Result<Vec<T>> {
         Ok(join_all(futures)
             .await
             .into_iter()
