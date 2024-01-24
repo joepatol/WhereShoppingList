@@ -24,6 +24,6 @@ async fn handler() -> Result<impl Reply> {
     let config = ConfigBuilder::new().max_concurrent_requests(100).build();
     match scrape(&config, get_html_document_from_url).await {
         Ok(_) => Ok(Response::builder().body(String::from("Scrape successful"))),
-        Err(e) => Ok(Response::builder().body(format!("Scrape Failed, message: {}", e)))
+        Err(e) => Ok(Response::builder().body(format!("Scrape failed, message: {}", e)))
     }
 }
