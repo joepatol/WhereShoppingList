@@ -15,21 +15,20 @@ const HOST: [u8; 4] = [0, 0, 0, 0];
 const PORT: u16 = 7071;
 type Result<T> = std::result::Result<T, Rejection>;
 
-
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     log::set_boxed_logger(Box::new(SimpleLogger::new()))
-    .map(|()| log::set_max_level(LevelFilter::Info))
-    .expect("Couldn't initialize logger");
+        .map(|()| log::set_max_level(LevelFilter::Info))
+        .expect("Failed to initialize logger");
 
     let state: Arc<Mutex<ScraperState>> = Arc::new(Mutex::new(ScraperState::Idle));
     let status_clone = state.clone();
     let func_clone = state.clone();
 
-    let health_check = warp::get()
+    let health_check_route = warp::get()
         .and(warp::path("health_check"))
         .and_then(health_check);
-    let scrape_func = warp::get()
+    let scrape_route = warp::get()
         .and(warp::path("scrape_func"))
         .map(move || func_clone.clone())
         .map(|state_clone| {
@@ -39,7 +38,6 @@ async fn main() {
             let scarper_state = ScraperStateResponse::new(ScraperState::Started);
             serde_json::to_string(&scarper_state).unwrap()
         });
-
     let status_route = warp::get()
         .and(warp::path("status"))
         .map(move || status_clone.clone())
@@ -47,8 +45,8 @@ async fn main() {
             get_handler_state
         });
 
-    let routes = health_check
-        .or(scrape_func)
+    let routes = health_check_route
+        .or(scrape_route)
         .or(status_route)
         .with(warp::cors()
         .allow_any_origin());
