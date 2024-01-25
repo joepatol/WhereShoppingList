@@ -5,3 +5,7 @@ type Product struct {
 	Price	float32	`json:"price"`
 	Store	string	`json:"store"`
 }
+
+type ScraperState struct {
+	Status	string	`json:"status"`
+}

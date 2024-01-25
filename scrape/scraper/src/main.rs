@@ -15,15 +15,36 @@ const HOST: [u8; 4] = [0, 0, 0, 0];
 const PORT: u16 = 7071;
 type Result<T> = std::result::Result<T, Rejection>;
 
+#[derive(Clone)]
+struct StateKeeper {
+    state: Arc<Mutex<ScraperState>>,
+}
+
+impl StateKeeper {
+    pub fn new() -> Self {
+        StateKeeper { state: Arc::new(Mutex::new(ScraperState::Idle)) }
+    }
+
+    pub async fn change_state(&self, new_state: ScraperState) {
+        let mut state = self.state.lock().await;
+        *state = new_state;
+    }
+
+    pub async fn get_state(&self) -> ScraperState {
+        let state = self.state.lock().await;
+        state.clone()
+    }
+}
+
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     log::set_boxed_logger(Box::new(SimpleLogger::new()))
         .map(|()| log::set_max_level(LevelFilter::Info))
         .expect("Failed to initialize logger");
 
-    let state: Arc<Mutex<ScraperState>> = Arc::new(Mutex::new(ScraperState::Idle));
-    let status_clone = state.clone();
-    let func_clone = state.clone();
+    let state_keeper = StateKeeper::new();
+    let status_clone = state_keeper.clone();
+    let func_clone = state_keeper.clone();
 
     let health_check_route = warp::get()
         .and(warp::path("health_check"))
@@ -58,41 +79,27 @@ async fn health_check() -> Result<impl Reply> {
     Ok(Response::builder().body("Hi, all is looking dandy!"))
 }
 
-async fn get_handler_state(state: Arc<Mutex<ScraperState>>) -> Result<impl Reply>  {
-    let scraper_state = get_scraper_state(state).await;
+async fn get_handler_state(state_keeper: StateKeeper) -> Result<impl Reply>  {
+    let scraper_state = state_keeper.get_state().await;
     let response = ScraperStateResponse::new(scraper_state);
     Ok(Response::builder().body(serde_json::to_string(&response).unwrap()))
 }
 
-async fn handler(mut state: Arc<Mutex<ScraperState>>) {
-    if get_scraper_state(state.clone()).await == ScraperState::Running {
+async fn handler(state_keeper: StateKeeper) {
+    if state_keeper.get_state().await == ScraperState::Running {
         return
     }
 
-    state = change_scraper_state(state, ScraperState::Running).await;
+    state_keeper.change_state(ScraperState::Running).await;
     let config = ConfigBuilder::new()
         .max_concurrent_requests(50)
         .build();
 
     match scrape(config, get_html_document_from_url).await {
-        Ok(_) => { change_scraper_state(state, ScraperState::Success).await },
+        Ok(_) => { state_keeper.change_state(ScraperState::Success).await },
         Err(e) => { 
             info!("Scraping failed, message: {}", e);
-            change_scraper_state(state, ScraperState::Failed).await 
+            state_keeper.change_state(ScraperState::Failed).await 
         },
     };
-}
-
-async fn get_scraper_state(state: Arc<Mutex<ScraperState>>) -> ScraperState {
-    let istate = state.lock().await; 
-    let cur_state = istate.clone();
-    drop(istate); 
-    cur_state
-}
-
-async fn change_scraper_state(state: Arc<Mutex<ScraperState>>, new_state: ScraperState) -> Arc<Mutex<ScraperState>>{
-    let mut istate = state.lock().await; 
-    *istate = new_state;
-    drop(istate); 
-    state
 }
