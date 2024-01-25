@@ -56,17 +56,16 @@ async fn main() {
             tokio::spawn(async move {
                 handler(state_clone).await
             });
-            let scarper_state = ScraperStateResponse::new(ScraperState::Started);
-            serde_json::to_string(&scarper_state).unwrap()
+            let scraper_state = ScraperStateResponse::new(ScraperState::Started);
+            serde_json::to_string(&scraper_state).unwrap()
         });
     let status_route = warp::get()
         .and(warp::path("status"))
         .map(move || status_clone.clone())
-        .and_then({
-            get_handler_state
-        });
+        .and_then(get_handler_state);
 
-    let routes = health_check_route
+    let routes = 
+        health_check_route
         .or(scrape_route)
         .or(status_route)
         .with(warp::cors()

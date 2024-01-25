@@ -8,7 +8,7 @@ WORKDIR /func/scraper
 ENV RUSTFLAGS='-C target-feature=-crt-static'
 RUN cargo build --release
 
-FROM rust:1.75.0-alpine
+FROM alpine:latest
 WORKDIR /opt/func
 COPY --from=builder /func/scraper/target/release/scraper .
 
