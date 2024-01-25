@@ -1,6 +1,6 @@
 use scraper::Html;
 use anyhow::Result;
-use log::{Log, Record};
+use log::info;
 use std::future::Future;
 use scrape_core::{Scraper, ProductInfo, RateLimiter};
 use scrape_core::scrape_utils::build_selector;
@@ -16,18 +16,16 @@ pub fn src() -> String {
 }
 
 #[derive(Clone)]
-pub struct JumboScraper<T, L> 
+pub struct JumboScraper<T> 
 where
     T: Future<Output = Result<Html>> + Send,
-    L: Log
 {
     html_fetcher: fn(String) -> T,
-    logger: L,
 }
 
-impl<T: Future<Output = Result<Html>> + Send, L: Log> JumboScraper<T, L> {
-    pub fn new(fetch_func: fn(String) -> T, logger: L) -> Self {
-        Self { html_fetcher: fetch_func, logger }
+impl<T: Future<Output = Result<Html>> + Send> JumboScraper<T> {
+    pub fn new(fetch_func: fn(String) -> T) -> Self {
+        Self { html_fetcher: fetch_func }
     }
 
     async fn scrape_page(&self, offset: String) -> Result<Vec<ProductInfo>> {
@@ -48,14 +46,14 @@ impl<T: Future<Output = Result<Html>> + Send, L: Log> JumboScraper<T, L> {
             );
             products.push(product);
         };
-        self.logger.log(&Record::builder().target(&format!("Scraped url {}", url)).build());
+        info!(target: &src(), "Scraped url {}", url);
         Ok(products)
     }
 }
 
-impl<T: Future<Output = Result<Html>> + Send, L: Log> Scraper for JumboScraper<T, L> {
+impl<T: Future<Output = Result<Html>> + Send> Scraper for JumboScraper<T> {
     async fn scrape(&self, max_items: Option<usize>, rate_limiter: &RateLimiter) -> Result<Vec<ProductInfo>> {
-        self.logger.log(&Record::builder().target(&format!("Scraping {}", src())).build());
+        info!(target: &src(), "Start scraping");
         let max_nr_products: usize;
     
         match max_items {

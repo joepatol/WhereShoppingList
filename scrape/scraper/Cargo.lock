@@ -1490,8 +1490,11 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "jumbo",
+ "log",
  "scrape_core",
  "scraper",
+ "serde",
+ "serde_json",
  "simple_logger",
  "sql",
  "tokio",
@@ -1562,6 +1565,7 @@ dependencies = [
  "reqwest",
  "scraper",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]

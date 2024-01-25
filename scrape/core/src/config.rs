@@ -16,13 +16,19 @@ impl ConfigBuilder<HasNot, HasNot> {
 
 impl<R> ConfigBuilder<HasNot, R> {
     pub fn scrape_max_items(self, amt: usize) -> ConfigBuilder<HasUInt, R> {
-        ConfigBuilder { max_items: Has { 0: amt }, max_concurrent_requests: self.max_concurrent_requests }
+        ConfigBuilder { 
+            max_items: Has { 0: amt }, 
+            max_concurrent_requests: self.max_concurrent_requests,
+        }
     }
 }
 
 impl<I> ConfigBuilder<I, HasNot> {
     pub fn max_concurrent_requests(self, nr: usize) -> ConfigBuilder<I, HasUInt> {
-        ConfigBuilder { max_items: self.max_items, max_concurrent_requests: Has { 0: nr } }
+        ConfigBuilder { 
+            max_items: self.max_items, 
+            max_concurrent_requests: Has { 0: nr }
+        }
     }
 }
 
@@ -53,7 +59,7 @@ impl ConfigBuilder<HasUInt, HasUInt> {
 #[derive(Debug)]
 pub struct ScrapeConfig {
     pub max_items: Option<usize>,
-    pub max_concurrent_requests: Option<usize>
+    pub max_concurrent_requests: Option<usize>,
 }
 
 impl ScrapeConfig {
