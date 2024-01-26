@@ -9,3 +9,7 @@ type Product struct {
 type ScraperState struct {
 	Status	string	`json:"status"`
 }
+
+type ScraperHealth struct {
+	State string `json:"status"`
+}

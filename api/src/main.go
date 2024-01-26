@@ -24,7 +24,37 @@ func main() {
 
     router.GET("/all_products", deps.getProducts)
 	router.GET("/find_products", deps.findProducts)
+	router.POST("/start_scraper", startScraper)
+	router.GET("/scraper_health", getScraperHealth)
+	router.GET("/scraper_state", getScraperState)
     router.Run("localhost:8080")
+}
+
+func getScraperHealth(ctx *gin.Context) {
+	json, err := controller.GetScraperHealthCheck()
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.IndentedJSON(http.StatusOK, json)
+	}
+}
+
+func startScraper(ctx *gin.Context) {
+	json, err := controller.StartScraper()
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.IndentedJSON(http.StatusOK, json)
+	}
+}
+
+func getScraperState(ctx *gin.Context) {
+	json, err := controller.GetScraperState()
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.IndentedJSON(http.StatusOK, json)
+	}	
 }
 
 func (deps *Depends) findProducts(ctx *gin.Context) {

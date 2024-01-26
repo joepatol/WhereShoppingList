@@ -20,3 +20,10 @@ services:
       - db
     environment:
       - CONN_URL=postgres://postgresuser:postgrespwd@supermarkt-db:5432/supermarkt
+  api:
+    container_name: supermarkt-api
+    build: ./api
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
