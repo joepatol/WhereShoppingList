@@ -22,7 +22,7 @@ async fn main() {
         .map(|()| log::set_max_level(LevelFilter::Info))
         .expect("Failed to initialize logger");
 
-    let state_keeper = StateKeeper::new(ScraperState::Idle);
+    let state_keeper = StateKeeper::default();
     let status_clone = state_keeper.clone();
     let func_clone = state_keeper.clone();
 

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.19
+FROM golang:1.21
 
 WORKDIR /app
 
@@ -8,5 +8,5 @@ WORKDIR /app
 COPY ./src ./
 RUN go mod download
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /docker-gs-ping
-CMD ["/docker-gs-ping"]
+RUN CGO_ENABLED=0 GOOS=linux go build -o /supermarkt-api
+CMD ["/supermarkt-api"]

@@ -61,9 +61,11 @@ impl<T: Future<Output = Result<Html>> + Send> Scraper for JumboScraper<T> {
             None => {
                 let document = (self.html_fetcher)(URL.to_string()).await?;
                 let nr_pages = get_nr_pages(&document)?;
+                info!("Going to scrape {} pages", &nr_pages);
                 max_nr_products = nr_pages * PRODUCTS_PER_PAGE
             },
         };
+        info!("Scraping max {} products", &max_nr_products);
         
         let mut loaded_nr_products = 0;
         let mut futures = Vec::new();

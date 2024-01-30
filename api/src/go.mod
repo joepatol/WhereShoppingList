@@ -1,6 +1,6 @@
 module src
 
-go 1.19
+go 1.21.6
 
 require (
 	github.com/bytedance/sonic v1.10.2 // indirect
@@ -37,5 +37,5 @@ require (
 	google.golang.org/protobuf v1.32.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gorm.io/driver/postgres v1.5.4 // indirect
-	gorm.io/gorm v1.25.5 // indirect
+	gorm.io/gorm v1.25.6 // indirect
 )

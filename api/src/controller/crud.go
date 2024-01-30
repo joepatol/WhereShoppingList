@@ -1,18 +1,34 @@
 package controller
 
 import (
+	"dto"
 	"models"
-	"strings"
 	"gorm.io/gorm"
 )
 
-func FindProductsInDb(db *gorm.DB, words []string) ([]models.Product, error) {
-	var products []models.Product
+func FindProductInDb(db *gorm.DB, search_text string) ([]dto.Product, error) {
+	query := `
+		SELECT *, ts_rank(to_tsvector('dutch', searchstr), plainto_tsquery('dutch', ?)) AS rank FROM products
+		WHERE to_tsvector('dutch', searchstr) @@ plainto_tsquery('dutch', ?)
+		ORDER BY rank DESC
+		LIMIT 10
+	`
 
-	result := db.Where("searchstr @> ARRAY[?]", strings.Join(words, ",")).Find(&products)
+	var products []dto.Product
+
+	result := db.Raw(query, search_text, search_text).Find(&products)
 	if result.Error != nil { return nil, result.Error }
 
 	return products, nil
+}
+
+func GetProductById(db *gorm.DB, id string) (*dto.Product, error) {
+	var product dto.Product
+
+	result := db.Where("id = ?", id).First(&product)
+	if result.Error != nil { return nil, result.Error }
+
+	return &product, nil
 }
 
 func GetProductsFromDb(db *gorm.DB) ([]models.Product, error) {

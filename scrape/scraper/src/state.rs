@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::response::ScraperState;
+
 #[derive(Clone)]
 pub struct StateKeeper<T: Clone + Send> {
     state: Arc<Mutex<T>>,
@@ -19,5 +21,11 @@ impl<T: Clone + Send> StateKeeper<T> {
     pub async fn get_state(&self) -> T {
         let state = self.state.lock().await;
         state.clone()
+    }
+}
+
+impl Default for StateKeeper<ScraperState> {
+    fn default() -> Self {
+        StateKeeper::new(ScraperState::Idle)
     }
 }

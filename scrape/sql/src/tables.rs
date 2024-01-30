@@ -1,7 +1,7 @@
 pub mod products {
     use sqlx::PgPool;
     use scrape_core::{InDbProduct, DbError};
-    use anyhow::Result;
+    use anyhow::{Ok, Result};
 
     pub async fn insert(products: &Vec<InDbProduct>, pool: &PgPool) -> Result<()>{
         let query_str = r"

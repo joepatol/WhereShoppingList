@@ -31,6 +31,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "albert_heijn"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "log",
+ "reqwest",
+ "scrape_core",
+ "scraper",
+ "thiserror",
+]
+
+[[package]]
 name = "allocator-api2"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1488,6 +1500,7 @@ dependencies = [
 name = "rust_scraper"
 version = "0.1.0"
 dependencies = [
+ "albert_heijn",
  "anyhow",
  "jumbo",
  "log",

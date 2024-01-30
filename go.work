@@ -1,0 +1,9 @@
+go 1.21.6
+
+use (
+    ./api/src
+    ./api/src/controller
+    ./api/src/db
+    ./api/src/dto
+    ./api/src/models
+)

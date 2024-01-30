@@ -23,7 +23,8 @@ func main() {
 	}
 
     router.GET("/all_products", deps.getProducts)
-	router.GET("/find_products", deps.findProducts)
+	router.GET("/product", deps.getProductById)
+	router.GET("/find_product", deps.findProducts)
 	router.POST("/start_scraper", startScraper)
 	router.GET("/scraper_health", getScraperHealth)
 	router.GET("/scraper_state", getScraperState)
@@ -59,9 +60,9 @@ func getScraperState(ctx *gin.Context) {
 
 func (deps *Depends) findProducts(ctx *gin.Context) {
 	query := ctx.Request.URL.Query()
-	var words []string = query["words"]
+	var search_text string = query.Get("search_text")
 
-	products, err := controller.FindProductsInDb(deps.Database, words)
+	products, err := controller.FindProductInDb(deps.Database, search_text)
 	if err != nil {
 		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
 	} else {
@@ -75,5 +76,14 @@ func (deps *Depends) getProducts(ctx *gin.Context) {
 		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
 	} else {
 		ctx.IndentedJSON(http.StatusOK, products)
+	}
+}
+
+func (deps *Depends) getProductById(ctx *gin.Context) {
+	product, err := controller.GetProductById(deps.Database, ctx.Query("id"))
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.IndentedJSON(http.StatusOK, product)
 	}
 }

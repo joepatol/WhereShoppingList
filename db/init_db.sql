@@ -8,3 +8,7 @@ CREATE TABLE IF NOT EXISTS products (
     SearchStr VARCHAR(255),
     Price FLOAT4
 );
+
+CREATE EXTENSION pg_trgm;
+
+CREATE INDEX idx_product_name ON products USING gin(to_tsvector('dutch', SearchStr));

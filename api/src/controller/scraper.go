@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 )
 
-const START_SCRAPE_URL string = "http://scrape-func:7071/scrap_func"
-const SCRAPE_STATE_URL string = "http://scrape-func:7071/state"
-const SCRAPE_HEALTH_URL string = "http://scrape-func:7071/health_check"
+const START_SCRAPE_URL string = "http://localhost:7071/scrape_func"
+const SCRAPE_STATE_URL string = "http://localhost:7071/status"
+const SCRAPE_HEALTH_URL string = "http://localhost:7071/health_check"
 
 func GetScraperHealthCheck() (*dto.ScraperHealth, error) {
 	resp, err := http.Get(SCRAPE_HEALTH_URL)

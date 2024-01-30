@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use scraper::Html;
 use log::info;
 use std::future::Future;
 use jumbo::JumboScraper;
+use albert_heijn::AlbertHeijnScraper;
 use scrape_core::{RateLimiter, Scraper};
 use sql::{tables, self};
 use anyhow::Result;
@@ -16,10 +16,9 @@ pub async fn scrape<T: Future<Output = Result<Html>> + Send>(config: ScrapeConfi
     info!("Clearing tables");
     tables::products::truncate(&pool).await?;
     info!("Assembling scrapers...");
-    let scrapers = build_scrapers(connector_func);
     info!("Scraping...");
     let rate_limiter = RateLimiter::new(config.max_concurrent_requests);
-    let db_products = run_scrapers(&config, scrapers, &rate_limiter).await?;
+    let db_products = run_scrapers(&config, &rate_limiter, connector_func).await?;
     info!("Writing new scrapes to db...");
     tables::products::insert(&db_products, &pool).await?;
     info!("All done");
@@ -27,28 +26,45 @@ pub async fn scrape<T: Future<Output = Result<Html>> + Send>(config: ScrapeConfi
     Ok(())
 }
 
-fn build_scrapers<T: Future<Output = Result<Html>> + Send>(connector_func: fn(String) -> T) -> HashMap<&'static str, impl Scraper> {
-    HashMap::from([
-        ("Jumbo", JumboScraper::new(connector_func))
-    ])
+async fn run_scrapers<T: Future<Output = Result<Html>> + Send>(
+    cfg: &ScrapeConfig,
+    rate_limiter: &RateLimiter,
+    connector_func: fn(String) -> T,
+) -> Result<Vec<InDbProduct>> {
+    let mut db_products = Vec::new();
+
+    db_products.extend(run_scraper(
+        cfg, 
+        JumboScraper::new(connector_func), 
+        rate_limiter, 
+        "Jumbo")
+        .await?
+    );
+
+    db_products.extend(run_scraper(
+        cfg, 
+        AlbertHeijnScraper::new(connector_func), 
+        rate_limiter, 
+        "Albert Heijn")
+        .await?
+    );
+
+    Ok(db_products)
 }
 
-async fn run_scrapers(
+async fn run_scraper(
     cfg: &ScrapeConfig, 
-    scrapers: HashMap<&'static str, impl Scraper>,
+    scraper: impl Scraper,
     rate_limiter: &RateLimiter,
+    scraper_name: &str,
 ) -> Result<Vec<InDbProduct>> {
-    let mut db_products: Vec<InDbProduct> = Vec::new();
-    for (scraper_name, scraper) in scrapers.iter() {
-        let products = scraper.scrape(cfg.max_items, rate_limiter).await?;
-        let in_db_products = 
-            products
-            .into_iter()
-            .map(|p| 
-                InDbProduct::new(scraper_name.to_string(), p)
-            );
-        
-        db_products.extend(in_db_products);
-    }
-    Ok(db_products)
+    let products = scraper.scrape(cfg.max_items, rate_limiter).await?;
+    Ok(
+        products
+        .into_iter()
+        .map(|p| 
+            InDbProduct::new(scraper_name.to_string(), p)
+        )
+        .collect()
+    )
 }
