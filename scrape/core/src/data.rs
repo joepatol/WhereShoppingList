@@ -18,10 +18,11 @@ impl InDbProduct {
 pub struct ProductInfo {
     pub name: String,
     pub price: f32,
+    pub url: String,
 }
 
 impl ProductInfo {
-    pub fn new(name: String, price: f32) -> Self {
-        ProductInfo { name, price }
+    pub fn new(name: String, price: f32, url: String) -> Self {
+        ProductInfo { name, price, url }
     }
 }

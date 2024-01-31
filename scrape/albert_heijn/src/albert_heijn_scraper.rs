@@ -2,12 +2,13 @@ use anyhow::Result;
 use log::info;
 use scrape_core::scrape_utils::build_selector;
 use scrape_core::{ProductInfo, RateLimiter, Scraper, HtmlLoader};
-use super::parse::{get_product_name, get_price, get_links};
+use super::parse::{get_product_name, get_price, get_links, get_product_url};
 
 pub const BASE_URL: &str = "https://www.ah.nl";
 const LETTER_URL: &str = "/producten/merk?letter=";
 const LETTERS: [&str; 27] = [
-    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "%23",
+    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", 
+    "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "%23",
 ];
 pub const SRC: &str = "Albert Heijn";
 
@@ -44,9 +45,11 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
 
         let mut products = Vec::new();
         for product_container in product_containers.into_iter() {
-            let product_name = get_product_name(product_container)?;
-            let price = get_price(product_container)?;
-            products.push(ProductInfo::new(product_name, price));
+            products.push(ProductInfo::new(
+                get_product_name(product_container)?,
+                get_price(product_container)?,
+                get_product_url(product_container)?,
+            ));
         };
 
         Ok(products) 

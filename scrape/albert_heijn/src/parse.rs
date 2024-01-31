@@ -5,6 +5,17 @@ use scrape_core::ScrapeError;
 use scrape_core::scrape_utils::{build_selector, walk_selectors};
 use super::albert_heijn_scraper::{SRC, BASE_URL};
 
+pub fn get_product_url(element: ElementRef) -> Result<String> {
+    let selector = build_selector("a", SRC)?;
+    let link_html = walk_selectors(element, &[selector], SRC)?;
+    let link = link_html
+        .attr("href")
+        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string() })?;
+    let mut prod_url = BASE_URL.to_owned();
+    prod_url.push_str(link);
+    Ok(prod_url)
+}
+
 pub fn get_links(element: ElementRef) -> Result<Vec<String>> {
     let brand_links_selector = build_selector("div.brand-hub_links__E6cvr", SRC)?;
     let brand_links_container = walk_selectors(element, &[brand_links_selector], SRC)?;

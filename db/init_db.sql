@@ -4,9 +4,10 @@ DROP TABLE IF EXISTS products;
 CREATE TABLE IF NOT EXISTS products (
     ID SERIAL,
     Name VARCHAR(255),
+    Price FLOAT4,
     Store VARCHAR(100),
+    Url VARCHAR(750),
     SearchStr VARCHAR(255),
-    Price FLOAT4
 );
 
 CREATE EXTENSION pg_trgm;

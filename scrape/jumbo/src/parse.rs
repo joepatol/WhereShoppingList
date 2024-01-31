@@ -1,6 +1,6 @@
 use std::num::{ParseIntError, ParseFloatError};
 use scraper::{Html, ElementRef};
-use super::jumbo_scraper::SRC;
+use super::jumbo_scraper::{SRC, BASE_URL};
 use anyhow::Result;
 use scrape_core::ScrapeError;
 use scrape_core::scrape_utils::{
@@ -8,6 +8,17 @@ use scrape_core::scrape_utils::{
     build_selector,
     build_selectors,
 };
+
+pub fn get_product_url(element: ElementRef) -> Result<String> {
+    let selector = build_selector("a", SRC)?;
+    let link_html = walk_selectors(element, &[selector], SRC)?;
+    let link = link_html
+        .attr("href")
+        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string() })?;
+    let mut prod_url = BASE_URL.to_owned();
+    prod_url.push_str(link);
+    Ok(prod_url)
+}
 
 pub fn get_nr_pages(document: &Html) -> Result<usize> {
     let selector_strings = [

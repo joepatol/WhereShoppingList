@@ -2,15 +2,15 @@ use anyhow::Result;
 use log::info;
 use scrape_core::{Scraper, ProductInfo, RateLimiter, HtmlLoader};
 use scrape_core::scrape_utils::build_selector;
-use super::parse::{get_name, get_price, get_nr_pages};
+use super::parse::{get_name, get_price, get_nr_pages, get_product_url};
 
 const PRODUCTS_PER_PAGE: usize = 24;
+pub const BASE_URL: &str = "https://www.jumbo.com";
 const URL: &str = "https://www.jumbo.com/producten";
 const OFFSET_URL: &str = "/?offSet=";
 pub const SRC: &str = "Jumbo";
 
-#[derive(Clone)]
-pub struct JumboScraper<'a ,T: HtmlLoader + Send + Sync> {
+pub struct JumboScraper<'a, T: HtmlLoader + Send + Sync> {
     connector: &'a T,
 }
 
@@ -34,6 +34,7 @@ impl<'a, T: HtmlLoader + Send + Sync> JumboScraper<'a, T> {
             let product = ProductInfo::new(
                 get_name(html_product)?,
                 get_price(html_product)?,
+                get_product_url(html_product)?
             );
             products.push(product);
         };
