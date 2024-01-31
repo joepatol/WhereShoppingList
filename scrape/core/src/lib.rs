@@ -6,6 +6,7 @@ mod rate_limiter;
 pub mod connectors;
 pub mod scrape_utils;
 
+pub use reqwest::{Client as RequestClient, ClientBuilder as RequestClientBuilder, header as request_header};
 pub use error::{ScrapeError, DbError};
 pub use interface::Scraper;
 pub use config::{ConfigBuilder, ScrapeConfig};

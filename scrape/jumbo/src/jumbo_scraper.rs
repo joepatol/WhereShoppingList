@@ -2,7 +2,7 @@ use scraper::Html;
 use anyhow::Result;
 use log::info;
 use std::future::Future;
-use scrape_core::{Scraper, ProductInfo, RateLimiter};
+use scrape_core::{Scraper, ProductInfo, RateLimiter, RequestClient};
 use scrape_core::scrape_utils::build_selector;
 use super::parse::{get_name, get_price, get_nr_pages};
 
@@ -20,20 +20,22 @@ pub struct JumboScraper<T>
 where
     T: Future<Output = Result<Html>> + Send,
 {
-    html_fetcher: fn(String) -> T,
+    html_fetcher: fn(RequestClient, String) -> T,
 }
 
 impl<T: Future<Output = Result<Html>> + Send> JumboScraper<T> {
-    pub fn new(fetch_func: fn(String) -> T) -> Self {
+    pub fn new(fetch_func: fn(RequestClient,String) -> T) -> Self {
         Self { html_fetcher: fetch_func }
     }
 
     async fn scrape_page(&self, offset: String) -> Result<Vec<ProductInfo>> {
+        let client = RequestClient::new();
+
         let mut url = String::new();
         for slice in [URL, OFFSET_URL, &offset] {
             url.push_str(slice);
         }
-        let document = (self.html_fetcher)(url.clone()).await?;
+        let document = (self.html_fetcher)(client, url.clone()).await?;
     
         let selector = build_selector("article.product-container", &src())?;
         let html_products = document.select(&selector);
@@ -53,13 +55,15 @@ impl<T: Future<Output = Result<Html>> + Send> JumboScraper<T> {
 
 impl<T: Future<Output = Result<Html>> + Send> Scraper for JumboScraper<T> {
     async fn scrape(&self, max_items: Option<usize>, rate_limiter: &RateLimiter) -> Result<Vec<ProductInfo>> {
+        let client = RequestClient::new();
+
         info!(target: &src(), "Start scraping");
         let max_nr_products: usize;
     
         match max_items {
             Some(value) => max_nr_products = value,
             None => {
-                let document = (self.html_fetcher)(URL.to_string()).await?;
+                let document = (self.html_fetcher)(client, URL.to_string()).await?;
                 let nr_pages = get_nr_pages(&document)?;
                 info!("Going to scrape {} pages", &nr_pages);
                 max_nr_products = nr_pages * PRODUCTS_PER_PAGE

@@ -4,11 +4,11 @@ use std::future::Future;
 use jumbo::JumboScraper;
 use albert_heijn::AlbertHeijnScraper;
 use scrape_core::{RateLimiter, Scraper};
-use sql::{tables, self};
+use sql::{tables, self, PgPool};
 use anyhow::Result;
-use scrape_core::{InDbProduct, ScrapeConfig};
+use scrape_core::{InDbProduct, ScrapeConfig, RequestClient};
 
-pub async fn scrape<T: Future<Output = Result<Html>> + Send>(config: ScrapeConfig, connector_func: fn(String) -> T) -> Result<()> {
+pub async fn scrape<T: Future<Output = Result<Html>> + Send>(config: ScrapeConfig, connector_func: fn(RequestClient, String) -> T) -> Result<()> {
     info!("Starting scrape...");
     info!("Setting up SqlPool connection");
     let pool = sql::connect().await?;
@@ -18,9 +18,7 @@ pub async fn scrape<T: Future<Output = Result<Html>> + Send>(config: ScrapeConfi
     info!("Assembling scrapers...");
     info!("Scraping...");
     let rate_limiter = RateLimiter::new(config.max_concurrent_requests);
-    let db_products = run_scrapers(&config, &rate_limiter, connector_func).await?;
-    info!("Writing new scrapes to db...");
-    tables::products::insert(&db_products, &pool).await?;
+    run_scrapers(&config, &rate_limiter, connector_func, &pool).await?;
     info!("All done");
     pool.close().await;
     Ok(())
@@ -29,27 +27,32 @@ pub async fn scrape<T: Future<Output = Result<Html>> + Send>(config: ScrapeConfi
 async fn run_scrapers<T: Future<Output = Result<Html>> + Send>(
     cfg: &ScrapeConfig,
     rate_limiter: &RateLimiter,
-    connector_func: fn(String) -> T,
-) -> Result<Vec<InDbProduct>> {
-    let mut db_products = Vec::new();
+    connector_func: fn(RequestClient, String) -> T,
+    pool: &PgPool,
+) -> Result<()> {
+    let mut db_products;
 
-    db_products.extend(run_scraper(
-        cfg, 
-        JumboScraper::new(connector_func), 
-        rate_limiter, 
-        "Jumbo")
-        .await?
-    );
-
-    db_products.extend(run_scraper(
+    db_products = run_scraper(
         cfg, 
         AlbertHeijnScraper::new(connector_func), 
         rate_limiter, 
         "Albert Heijn")
-        .await?
-    );
+        .await?;
+    
+    info!("Writing new scrapes to db...");
+    tables::products::insert(&db_products, pool).await?;
 
-    Ok(db_products)
+    db_products = run_scraper(
+        cfg, 
+        JumboScraper::new(connector_func), 
+        rate_limiter, 
+        "Jumbo")
+        .await?;
+
+    info!("Writing new scrapes to db...");
+    tables::products::insert(&db_products, pool).await?;
+
+    Ok(())
 }
 
 async fn run_scraper(
