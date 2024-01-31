@@ -7,7 +7,6 @@ use serde_json::json;
 use simple_logger::SimpleLogger;
 use warp::{Filter, Rejection, Reply, http::Response};
 use funcs::scrape;
-use scrape_core::connectors::get_html_document_from_url;
 use scrape_core::ConfigBuilder;
 use crate::state::StateKeeper;
 use crate::response::{ScraperState, ScraperStateResponse};
@@ -82,7 +81,7 @@ async fn handler(state_keeper: StateKeeper<ScraperState>) {
         .max_concurrent_requests(50)
         .build();
 
-    match scrape(config, get_html_document_from_url).await {
+    match scrape(config).await {
         Ok(_) => { state_keeper.change_state(ScraperState::Success).await },
         Err(e) => { 
             info!("Scraping failed, message: {}", e);

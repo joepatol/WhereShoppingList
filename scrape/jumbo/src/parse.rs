@@ -1,6 +1,6 @@
 use std::num::{ParseIntError, ParseFloatError};
 use scraper::{Html, ElementRef};
-use super::jumbo_scraper::src;
+use super::jumbo_scraper::SRC;
 use anyhow::Result;
 use scrape_core::ScrapeError;
 use scrape_core::scrape_utils::{
@@ -13,29 +13,27 @@ pub fn get_nr_pages(document: &Html) -> Result<usize> {
     let selector_strings = [
         "div.pagination",
         "div.pages-grid",
-    ]; 
+    ];
 
-    let source: String = src();
-
-    let selectors = build_selectors(&selector_strings, &src())?;
+    let selectors = build_selectors(&selector_strings, SRC)?;
     let pages_grid = walk_selectors(
         document.root_element(), 
         &selectors, 
-        &source,
+        SRC,
     )?;
 
-    let btn_selector = build_selector("button", &source)?;
+    let btn_selector = build_selector("button", SRC)?;
 
     let last: String = pages_grid
         .select(&btn_selector)
         .last()
-        .ok_or(ScrapeError::InvalidStructureAssumed{ src: src()})?
+        .ok_or(ScrapeError::InvalidStructureAssumed{ src: SRC.to_string()})?
         .text()
         .collect();
 
     Ok(
         last.parse().map_err(|e: ParseIntError| {
-            ScrapeError::FailedToParseStringValue{ src: src(), err: e.to_string() }
+            ScrapeError::FailedToParseStringValue{ src: SRC.to_string(), err: e.to_string() }
         })?
     )
 }
@@ -48,12 +46,10 @@ pub fn get_name(html_product: ElementRef) -> Result<String> {
         "h2",
     ];
 
-    let source = src();
+    let selectors = build_selectors(&selector_strings, SRC)?;
+    let selected = walk_selectors(html_product, &selectors, SRC)?;
 
-    let selectors = build_selectors(&selector_strings, &src())?;
-    let selected = walk_selectors(html_product, &selectors, &source)?;
-
-    let name_selector = build_selector("a", &source)?;
+    let name_selector = build_selector("a", SRC)?;
 
     Ok(selected
         .select(&name_selector)
@@ -67,11 +63,11 @@ pub fn get_price(html_product: ElementRef) -> Result<f32> {
         "div.current-price",
     ];
 
-    let selectors = build_selectors(&selector_strings, &src())?;
+    let selectors = build_selectors(&selector_strings, SRC)?;
     let html_price = walk_selectors(html_product, &selectors[..], "Jumbo")?;
 
-    let whole_price_selector = build_selector("span.whole", &src())?;
-    let frac_price_selector = build_selector("sup.fractional", &src())?;
+    let whole_price_selector = build_selector("span.whole", SRC)?;
+    let frac_price_selector = build_selector("sup.fractional", SRC)?;
 
     let mut whole_price: String = html_price
         .select(&whole_price_selector)
@@ -85,7 +81,7 @@ pub fn get_price(html_product: ElementRef) -> Result<f32> {
 
     Ok(
         whole_price.parse().map_err(|e: ParseFloatError| {
-            ScrapeError::FailedToParseStringValue{ src: src(), err: e.to_string() }
+            ScrapeError::FailedToParseStringValue{ src: SRC.to_string(), err: e.to_string() }
         })?
     )
 }

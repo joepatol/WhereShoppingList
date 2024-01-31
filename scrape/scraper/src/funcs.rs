@@ -1,14 +1,12 @@
-use scraper::Html;
 use log::info;
-use std::future::Future;
 use jumbo::JumboScraper;
 use albert_heijn::AlbertHeijnScraper;
 use scrape_core::{RateLimiter, Scraper};
 use sql::{tables, self, PgPool};
 use anyhow::Result;
-use scrape_core::{InDbProduct, ScrapeConfig, RequestClient};
+use scrape_core::{InDbProduct, ScrapeConfig, ReqwestHtmlLoader, RequestClient, request_header, RequestClientBuilder};
 
-pub async fn scrape<T: Future<Output = Result<Html>> + Send>(config: ScrapeConfig, connector_func: fn(RequestClient, String) -> T) -> Result<()> {
+pub async fn scrape(config: ScrapeConfig) -> Result<()> {
     info!("Starting scrape...");
     info!("Setting up SqlPool connection");
     let pool = sql::connect().await?;
@@ -18,33 +16,41 @@ pub async fn scrape<T: Future<Output = Result<Html>> + Send>(config: ScrapeConfi
     info!("Assembling scrapers...");
     info!("Scraping...");
     let rate_limiter = RateLimiter::new(config.max_concurrent_requests);
-    run_scrapers(&config, &rate_limiter, connector_func, &pool).await?;
+    run_scrapers(&config, &rate_limiter, &pool).await?;
     info!("All done");
     pool.close().await;
     Ok(())
 }
 
-async fn run_scrapers<T: Future<Output = Result<Html>> + Send>(
+async fn run_scrapers(
     cfg: &ScrapeConfig,
     rate_limiter: &RateLimiter,
-    connector_func: fn(RequestClient, String) -> T,
     pool: &PgPool,
 ) -> Result<()> {
+    let mut headers = request_header::HeaderMap::new();
+    headers.insert(request_header::CONNECTION, request_header::HeaderValue::from_static("keep-alive"));
+    headers.insert(request_header::HOST, request_header::HeaderValue::from_static("www.ah.nl"));
+    let ah_client = RequestClientBuilder::new().default_headers(headers).gzip(true).build()?;
+
+    let ah_connector = ReqwestHtmlLoader::new(&ah_client);
     let mut db_products;
 
     db_products = run_scraper(
         cfg, 
-        AlbertHeijnScraper::new(connector_func), 
+        AlbertHeijnScraper::new(&ah_connector), 
         rate_limiter, 
         "Albert Heijn")
         .await?;
     
     info!("Writing new scrapes to db...");
     tables::products::insert(&db_products, pool).await?;
+    
+    let jumbo_client = RequestClient::new();
+    let jumbo_connector = ReqwestHtmlLoader::new(&jumbo_client);
 
     db_products = run_scraper(
         cfg, 
-        JumboScraper::new(connector_func), 
+        JumboScraper::new(&jumbo_connector), 
         rate_limiter, 
         "Jumbo")
         .await?;
@@ -61,7 +67,7 @@ async fn run_scraper(
     rate_limiter: &RateLimiter,
     scraper_name: &str,
 ) -> Result<Vec<InDbProduct>> {
-    let products = scraper.scrape(cfg.max_items, rate_limiter).await?;
+    let products = scraper.scrape(cfg.max_requests, rate_limiter).await?;
     Ok(
         products
         .into_iter()
