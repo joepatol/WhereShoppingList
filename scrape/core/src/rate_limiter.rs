@@ -22,8 +22,6 @@ impl RateLimiter {
             .map(|f| self.run_one(f))
         )
         .await
-        .into_iter()
-        .collect()
     }
 
     async fn run_one<T>(&self, future: impl Future<Output = T> + Send) -> Result<T> {
