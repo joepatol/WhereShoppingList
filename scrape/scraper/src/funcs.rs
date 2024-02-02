@@ -12,7 +12,7 @@ pub async fn scrape(config: ScrapeConfig) -> Result<()> {
     let pool = sql::connect().await?;
     info!("Using configuration: {:?}", &config);
     info!("Clearing tables");
-    tables::products::truncate(&pool).await?;
+    tables::truncate_all(&pool).await?;
     info!("Assembling scrapers...");
     info!("Scraping...");
     let rate_limiter = RateLimiter::new(config.max_concurrent_requests);
@@ -61,7 +61,7 @@ async fn run_scrapers(
     info!("Writing new scrapes to db...");
     tables::products::insert(&db_products, pool).await?;
     tables::scrape_errors::insert(&errors, pool).await?;
-    
+
     Ok(())
 }
 

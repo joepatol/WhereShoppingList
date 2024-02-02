@@ -1,7 +1,16 @@
+use sqlx::PgPool;
+use anyhow::Result;
+
+pub async fn truncate_all(pool: &PgPool) -> Result<()> {
+    products::truncate(pool).await?;
+    scrape_errors::truncate(pool).await?;
+    Ok(())
+}
+
 pub mod products {
     use sqlx::PgPool;
     use scrape_core::{InDbProduct, DbError};
-    use anyhow::{Ok, Result};
+    use anyhow::Result;
 
     pub async fn insert(products: &Vec<InDbProduct>, pool: &PgPool) -> Result<()>{
         let query_str = r"
@@ -76,7 +85,7 @@ pub mod products {
 pub mod scrape_errors {
     use sqlx::PgPool;
     use scrape_core::{InDbError, DbError};
-    use anyhow::{Ok, Result};
+    use anyhow::Result;
 
     pub async fn insert(errors: &Vec<InDbError>, pool: &PgPool) -> Result<()>{
         let query_str = r"

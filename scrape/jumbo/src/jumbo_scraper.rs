@@ -20,10 +20,7 @@ impl<'a, T: HtmlLoader + Send + Sync> JumboScraper<'a, T> {
     }
 
     async fn scrape_page(&self, offset: String) -> Result<Vec<ProductInfo>> {
-        let mut url = String::new();
-        for slice in [URL, OFFSET_URL, &offset] {
-            url.push_str(slice);
-        }
+        let url = format!("{}{}{}", URL, OFFSET_URL, offset);
         let mut products = Vec::new();
         
         let document = self.connector.load(url.clone()).await?;

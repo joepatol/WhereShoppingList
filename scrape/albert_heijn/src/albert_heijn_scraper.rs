@@ -5,12 +5,13 @@ use scrape_core::{ProductInfo, RateLimiter, Scraper, HtmlLoader, ResultCollector
 use super::parse::{get_product_name, get_price, get_links, get_product_url};
 
 pub const BASE_URL: &str = "https://www.ah.nl";
+pub const PAGE_PART: &str = "?page=";
+pub const OFFSET_PART: &str = "&withOffset=true";
 const LETTER_URL: &str = "/producten/merk?letter=";
-const LETTERS: [&str; 1] = ["l"];
-// const LETTERS: [&str; 27] = [
-//     "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "%23",
-//     "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", 
-// ];
+const LETTERS: [&str; 27] = [
+    "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "%23",
+    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", 
+];
 pub const SRC: &str = "Albert Heijn";
 
 pub struct AlbertHeijnScraper<'a, T: HtmlLoader + Send + Sync> {
@@ -22,11 +23,8 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
         Self { connector }
     }
 
-    pub async fn scrape_brand_urls_for_letter(&self, letter: &str) -> Result<Vec<String>> {
-        let mut url = String::default();
-        for sub_str in [BASE_URL, LETTER_URL, letter] {
-            url.push_str(sub_str);
-        }
+    async fn scrape_brand_urls_for_letter(&self, letter: &str) -> Result<Vec<String>> {
+        let url = format!("{}{}{}", BASE_URL, LETTER_URL, letter);
 
         info!("Scraping brand urls at {}", &url);
         let document = self.connector.load(url).await?;
@@ -34,10 +32,9 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
         Ok(get_links(document.root_element())?)
     }
 
-    pub async fn scrape_brand_page(&self, url: &str) -> Result<Vec<ProductInfo>> {
-        info!("Scraping brand url {}", url);
-        let document = self.connector.load(url.to_owned()).await?;
-
+    async fn scrape_page_with_offset(&self, url: &str, offset: usize) -> Result<Vec<ProductInfo>> {
+        let offset_url = format!("{}{}{}{}", url, PAGE_PART, offset.to_string(), OFFSET_PART);
+        let document = self.connector.load(offset_url).await?;
         let product_container_selector = build_selector(
             "article", 
             SRC
@@ -55,7 +52,7 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
         if products.len() == 0 {
             return Err(anyhow!("Found 0 products at {}", url));
         }
-        Ok(products) 
+        Ok(products)  
     }
 }
 
@@ -80,10 +77,15 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for AlbertHeijnScraper<'a, T> {
         let mut futures = Vec::new();
 
         for link in links.iter_ok() {
-            futures.push(self.scrape_brand_page(link));
-            if futures.len() > max_nr_requests - LETTERS.len() {
-                break
-            };
+            // This is very naive, just iterate over a lot of pages hoping we'll get them all
+            // Also it's overkill most pages 1 request is enough
+            // to improve!!
+            for page in 0..85 {
+                futures.push(self.scrape_page_with_offset(&link, page as usize));
+                if futures.len() > max_nr_requests - LETTERS.len() {
+                    break
+                };
+            }
         };
 
         let mut results: ResultCollector<ProductInfo> = rate_limiter.run(futures).await.into_iter().flatten().collect();
