@@ -79,8 +79,6 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
             };
             loaded_nr_products += PRODUCTS_PER_PAGE;
         };
-        let r = rate_limiter.run(futures).await;
-        info!("Done, collecting now...");
-        r.into_iter().flatten().collect()
+        rate_limiter.run(futures).await.into_iter().flatten().collect()
     }
 }

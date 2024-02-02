@@ -17,7 +17,7 @@ pub mod products {
                 $2::FLOAT4[], 
                 $3::VARCHAR(100)[], 
                 $4::VARCHAR(750)[],
-                $5::VARCHAR(255)[],
+                $5::VARCHAR(255)[]
             )";
 
         let names: Vec<&str> = products.iter().map(|p| p.info.name.as_str()).collect();
@@ -82,11 +82,11 @@ pub mod scrape_errors {
         let query_str = r"
             INSERT INTO scrape_errors(
                 scraper, 
-                message, 
+                message
             ) 
             SELECT * FROM UNNEST(
                 $1::VARCHAR(255)[], 
-                $2::TEXT[], 
+                $2::TEXT[]
             )";
 
         let scrapers: Vec<&str> = errors.iter().map(|e| e.scraper.as_str()).collect();

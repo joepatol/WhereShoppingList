@@ -30,19 +30,19 @@ async fn run_scrapers(
     let mut db_products;
     let mut errors;
 
-    let jumbo_client = RequestClient::new();
-    let jumbo_connector = ReqwestHtmlLoader::new(&jumbo_client);
+    // let jumbo_client = RequestClient::new();
+    // let jumbo_connector = ReqwestHtmlLoader::new(&jumbo_client);
 
-    (db_products, errors) = run_scraper(
-        cfg, 
-        JumboScraper::new(&jumbo_connector), 
-        rate_limiter, 
-        "Jumbo")
-        .await;
+    // (db_products, errors) = run_scraper(
+    //     cfg, 
+    //     JumboScraper::new(&jumbo_connector), 
+    //     rate_limiter, 
+    //     "Jumbo")
+    //     .await;
 
-    info!("Writing new scrapes to db...");
-    tables::products::insert(&db_products, pool).await?;
-    tables::scrape_errors::insert(&errors, pool).await?;
+    // info!("Writing new scrapes to db...");
+    // tables::products::insert(&db_products, pool).await?;
+    // tables::scrape_errors::insert(&errors, pool).await?;
 
     let mut headers = request_header::HeaderMap::new();
     headers.insert(request_header::CONNECTION, request_header::HeaderValue::from_static("keep-alive"));

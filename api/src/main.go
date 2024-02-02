@@ -28,6 +28,8 @@ func main() {
 	router.POST("/start_scraper", startScraper)
 	router.GET("/scraper_health", getScraperHealth)
 	router.GET("/scraper_state", getScraperState)
+	router.GET("/scrape_errors", deps.getScrapeErrors)
+	router.GET("/store", deps.getProductsByStoreName)
     router.Run("localhost:8080")
 }
 
@@ -85,5 +87,23 @@ func (deps *Depends) getProductById(ctx *gin.Context) {
 		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
 	} else {
 		ctx.IndentedJSON(http.StatusOK, product)
+	}
+}
+
+func (deps *Depends) getScrapeErrors(ctx *gin.Context) {
+	errors, err := controller.GetScrapeErrorsFromDb(deps.Database)
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.IndentedJSON(http.StatusOK, errors)
+	}
+}
+
+func (deps *Depends) getProductsByStoreName(ctx *gin.Context) {
+	errors, err := controller.GetProductsByStore(deps.Database, ctx.Query("store"))
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.IndentedJSON(http.StatusOK, errors)
 	}
 }

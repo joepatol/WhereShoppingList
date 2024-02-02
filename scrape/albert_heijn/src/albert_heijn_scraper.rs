@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use log::info;
 use scrape_core::scrape_utils::build_selector;
 use scrape_core::{ProductInfo, RateLimiter, Scraper, HtmlLoader, ResultCollector};
@@ -6,10 +6,11 @@ use super::parse::{get_product_name, get_price, get_links, get_product_url};
 
 pub const BASE_URL: &str = "https://www.ah.nl";
 const LETTER_URL: &str = "/producten/merk?letter=";
-const LETTERS: [&str; 27] = [
-    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", 
-    "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "%23",
-];
+const LETTERS: [&str; 1] = ["l"];
+// const LETTERS: [&str; 27] = [
+//     "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "%23",
+//     "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", 
+// ];
 pub const SRC: &str = "Albert Heijn";
 
 pub struct AlbertHeijnScraper<'a, T: HtmlLoader + Send + Sync> {
@@ -51,7 +52,9 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
                 get_product_url(product_container)?,
             ));
         };
-
+        if products.len() == 0 {
+            return Err(anyhow!("Found 0 products at {}", url));
+        }
         Ok(products) 
     }
 }
@@ -72,15 +75,11 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for AlbertHeijnScraper<'a, T> {
             link_futures.push(self.scrape_brand_urls_for_letter(&letter));
         }
 
-        let links = rate_limiter.run(link_futures).await;
-        info!("Got {} links", links.len());
-        let c: ResultCollector<String> = links.into_iter().flatten().collect();
-        
-        info!("Assembling futures");
+        let links: ResultCollector<String> = rate_limiter.run(link_futures).await.into_iter().flatten().collect();
+
         let mut futures = Vec::new();
 
-        for link in c.iter_ok() {
-            info!("Pushing");
+        for link in links.iter_ok() {
             futures.push(self.scrape_brand_page(link));
             if futures.len() > max_nr_requests - LETTERS.len() {
                 break
@@ -88,7 +87,7 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for AlbertHeijnScraper<'a, T> {
         };
 
         let mut results: ResultCollector<ProductInfo> = rate_limiter.run(futures).await.into_iter().flatten().collect();
-        results.inherit_errs(c);
+        results.inherit_errs(links);
         results
     }
 }
