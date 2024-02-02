@@ -1,7 +1,7 @@
 use anyhow::Result;
 use log::info;
 use scrape_core::scrape_utils::build_selector;
-use scrape_core::{ProductInfo, RateLimiter, Scraper, HtmlLoader};
+use scrape_core::{ProductInfo, RateLimiter, Scraper, HtmlLoader, ResultCollector};
 use super::parse::{get_product_name, get_price, get_links, get_product_url};
 
 pub const BASE_URL: &str = "https://www.ah.nl";
@@ -57,10 +57,10 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
 }
 
 impl<'a, T: HtmlLoader + Send + Sync> Scraper for AlbertHeijnScraper<'a, T> {
-    async fn scrape(&self, max_requests: Option<usize>, rate_limiter: &RateLimiter) -> Result<Vec<ProductInfo>> {
+    async fn scrape(&self, max_requests: Option<usize>, rate_limiter: &RateLimiter) ->  ResultCollector<ProductInfo> {
         info!(target: SRC, "Start scraping");
         let max_nr_requests: usize;
-    
+
         match max_requests {
             Some(value) => max_nr_requests = value,
             None => max_nr_requests = usize::MAX,
@@ -72,17 +72,23 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for AlbertHeijnScraper<'a, T> {
             link_futures.push(self.scrape_brand_urls_for_letter(&letter));
         }
 
-        let links = rate_limiter.run(link_futures).await?;
+        let links = rate_limiter.run(link_futures).await;
+        info!("Got {} links", links.len());
+        let c: ResultCollector<String> = links.into_iter().flatten().collect();
         
+        info!("Assembling futures");
         let mut futures = Vec::new();
 
-        for link in links.iter() {
+        for link in c.iter_ok() {
+            info!("Pushing");
             futures.push(self.scrape_brand_page(link));
             if futures.len() > max_nr_requests - LETTERS.len() {
                 break
             };
         };
 
-        Ok(rate_limiter.run(futures).await?)
+        let mut results: ResultCollector<ProductInfo> = rate_limiter.run(futures).await.into_iter().flatten().collect();
+        results.inherit_errs(c);
+        results
     }
 }

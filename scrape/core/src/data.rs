@@ -26,3 +26,15 @@ impl ProductInfo {
         ProductInfo { name, price, url }
     }
 }
+
+#[derive(Debug)]
+pub struct InDbError {
+    pub scraper: String,
+    pub message: String,
+}
+
+impl InDbError {
+    pub fn new(scraper: String, message: String) -> Self {
+        InDbError { scraper, message }
+    }
+}

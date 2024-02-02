@@ -1,6 +1,6 @@
 use anyhow::Result;
 use log::info;
-use scrape_core::{Scraper, ProductInfo, RateLimiter, HtmlLoader};
+use scrape_core::{HtmlLoader, ProductInfo, RateLimiter, ResultCollector, Scraper};
 use scrape_core::scrape_utils::build_selector;
 use super::parse::{get_name, get_price, get_nr_pages, get_product_url};
 
@@ -44,7 +44,7 @@ impl<'a, T: HtmlLoader + Send + Sync> JumboScraper<'a, T> {
 }
 
 impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
-    async fn scrape(&self, max_requests: Option<usize>, rate_limiter: &RateLimiter) -> Result<Vec<ProductInfo>> {
+    async fn scrape(&self, max_requests: Option<usize>, rate_limiter: &RateLimiter) -> ResultCollector<ProductInfo> {
         info!(target: SRC, "Start scraping");
         let max_nr_requests: usize;
     
@@ -58,8 +58,14 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
         // across an await point
         let total_products: usize;
         {
-            let document = self.connector.load(URL.to_owned()).await?;
-            let nr_pages: usize = get_nr_pages(&document)?;
+            let document = match self.connector.load(URL.to_owned()).await {
+                Ok(html) => html,
+                Err(e) => return ResultCollector::from(e)
+            };
+            let nr_pages = match get_nr_pages(&document) {
+                Ok(nr) => nr,
+                Err(e) => return ResultCollector::from(e),
+            };
             total_products = nr_pages * PRODUCTS_PER_PAGE;
         }
         
@@ -73,6 +79,8 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
             };
             loaded_nr_products += PRODUCTS_PER_PAGE;
         };
-        Ok(rate_limiter.run(futures).await?)
+        let r = rate_limiter.run(futures).await;
+        info!("Done, collecting now...");
+        r.into_iter().flatten().collect()
     }
 }

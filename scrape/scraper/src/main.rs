@@ -79,6 +79,7 @@ async fn handler(state_keeper: StateKeeper<ScraperState>) {
     state_keeper.change_state(ScraperState::Running).await;
     let config = ConfigBuilder::new()
         .max_concurrent_requests(50)
+        .max_requests(10)
         .build();
 
     match scrape(config).await {

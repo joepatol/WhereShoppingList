@@ -15,7 +15,7 @@ impl ConfigBuilder<HasNot, HasNot> {
 }
 
 impl<R> ConfigBuilder<HasNot, R> {
-    pub fn scrape_max_items(self, amt: usize) -> ConfigBuilder<HasUInt, R> {
+    pub fn max_requests(self, amt: usize) -> ConfigBuilder<HasUInt, R> {
         ConfigBuilder { 
             max_requests: Has { 0: amt }, 
             max_concurrent_requests: self.max_concurrent_requests,
