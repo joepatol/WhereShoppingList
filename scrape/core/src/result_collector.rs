@@ -223,9 +223,11 @@ impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<T> {
 }
 
 impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T> {
-    /// Transform this ResultCollector into another ResultCollector using a
-    /// closure that returns a future. Turning this `ResultCollector<T>` into `ResultCollector<I>`
-    /// Ratelimiter is used to expose control over the execution of the futures
+    /// Transform this `ResultCollector<T>` into `ResultCollector<I>` using a
+    /// closure that returns a future.
+    /// 
+    /// Ratelimiter is used to expose control over the execution of the futures. E.g. to limit the
+    /// number of concurrent requests.
     async fn transform_async<F, R>(self, func: impl Fn(T) -> F, rate_limiter: &R) -> ResultCollector<I>
     where
         F: Future<Output = Result<I, anyhow::Error>> + Send + Sync,
