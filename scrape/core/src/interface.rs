@@ -4,7 +4,7 @@ use anyhow::Result;
 use std::future::Future;
 
 pub trait Scraper {
-    fn scrape(&self, max_requests: Option<usize>, rate_limiter: &RateLimiter) -> impl Future<Output = ResultCollector<ProductInfo>> + Send;
+    fn scrape<R: RateLimiter + Send + Sync>(&self, max_requests: Option<usize>, rate_limiter: &R) -> impl Future<Output = ResultCollector<ProductInfo>> + Send;
 }
 
 pub trait HtmlLoader {

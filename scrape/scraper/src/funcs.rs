@@ -1,7 +1,7 @@
 use log::info;
 use jumbo::JumboScraper;
 use albert_heijn::AlbertHeijnScraper;
-use scrape_core::{RateLimiter, Scraper};
+use scrape_core::{SemaphoreRateLimiter, Scraper};
 use sql::{tables, self, PgPool};
 use anyhow::Result;
 use scrape_core::{InDbProduct, InDbError, ScrapeConfig, ReqwestHtmlLoader, RequestClient, request_header, RequestClientBuilder};
@@ -15,7 +15,7 @@ pub async fn scrape(config: ScrapeConfig) -> Result<()> {
     tables::truncate_all(&pool).await?;
     info!("Assembling scrapers...");
     info!("Scraping...");
-    let rate_limiter = RateLimiter::new(config.max_concurrent_requests);
+    let rate_limiter = SemaphoreRateLimiter::new(config.max_concurrent_requests);
     run_scrapers(&config, &rate_limiter, &pool).await?;
     info!("All done");
     pool.close().await;
@@ -24,7 +24,7 @@ pub async fn scrape(config: ScrapeConfig) -> Result<()> {
 
 async fn run_scrapers(
     cfg: &ScrapeConfig,
-    rate_limiter: &RateLimiter,
+    rate_limiter: &SemaphoreRateLimiter,
     pool: &PgPool,
 ) -> Result<()> {
     let mut db_products;
@@ -68,7 +68,7 @@ async fn run_scrapers(
 async fn run_scraper(
     cfg: &ScrapeConfig, 
     scraper: impl Scraper,
-    rate_limiter: &RateLimiter,
+    rate_limiter: &SemaphoreRateLimiter,
     scraper_name: &str,
 ) -> (Vec<InDbProduct>, Vec<InDbError>) {
     let results = scraper.scrape(cfg.max_requests, rate_limiter).await;

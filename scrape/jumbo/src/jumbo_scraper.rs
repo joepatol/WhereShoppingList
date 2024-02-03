@@ -1,6 +1,6 @@
 use anyhow::Result;
 use log::info;
-use scrape_core::{HtmlLoader, ProductInfo, RateLimiter, ResultCollector, Scraper};
+use scrape_core::{HtmlLoader, ProductInfo, RateLimiter, ResultCollector, AsyncTransform, Scraper};
 use scrape_core::scrape_utils::build_selector;
 use super::parse::{get_name, get_price, get_nr_pages, get_product_url};
 
@@ -41,7 +41,7 @@ impl<'a, T: HtmlLoader + Send + Sync> JumboScraper<'a, T> {
 }
 
 impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
-    async fn scrape(&self, max_requests: Option<usize>, rate_limiter: &RateLimiter) -> ResultCollector<ProductInfo> {
+    async fn scrape<R: RateLimiter + Send + Sync>(&self, max_requests: Option<usize>, rate_limiter: &R) -> ResultCollector<ProductInfo> {
         info!(target: SRC, "Start scraping");
         let max_nr_requests: usize;
     
@@ -65,17 +65,19 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
             };
             total_products = nr_pages * PRODUCTS_PER_PAGE;
         }
-        
-        let mut loaded_nr_products = 0;
-        let mut futures = Vec::new();
 
-        while loaded_nr_products < total_products {
-            futures.push(self.scrape_page(loaded_nr_products.to_string()));
-            if futures.len() == max_nr_requests - 1 {
-                break
-            };
-            loaded_nr_products += PRODUCTS_PER_PAGE;
-        };
-        rate_limiter.run(futures).await.into_iter().flatten().collect()
+        let mut offsets = (0..total_products)
+            .step_by(PRODUCTS_PER_PAGE)
+            .map(|e| e.to_string())
+            .collect::<Vec<String>>();
+        
+        if offsets.len() > max_nr_requests {
+            offsets = offsets[0..max_nr_requests].iter().cloned().collect();
+        }
+
+        ResultCollector::from(offsets)
+            .transform_async(|i| self.scrape_page(i), rate_limiter)
+            .await
+            .flatten()
     }
 }
