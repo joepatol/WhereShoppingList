@@ -15,10 +15,10 @@ pub trait AsyncTransform<T: Send + Sync, I: Send + Sync> {
     ;
 }
 
-/// Collect results of operations that return an anyhow::Result<T>
-/// Ok and Err values are collected into their own vectors
-/// allowing to operate on the Ok result while keeping track
-/// of all errors that occurred along the way
+/// Collect results of operations that return an `anyhow::Result<T>`.
+/// `Ok` and `Err` values are collected into their own vectors,
+/// allowing you to operate on the `Ok` result while keeping track
+/// of all errors that occurred along the way.
 /// 
 /// # Example
 /// ```
@@ -84,6 +84,7 @@ impl<T: Send + Sync> ResultCollector<T> {
         }
     }
 
+    /// Create an Iterator over the Ok variants
     pub fn iter_ok(&self) -> impl Iterator<Item = &T> {
         self.successes.iter()
     }
@@ -99,7 +100,8 @@ impl<T: Send + Sync> ResultCollector<T> {
 }
 
 impl<T: Send + Sync + Clone> ResultCollector<T> {
-    /// Explode the Ok vector using an iterator.
+    /// Explode the `Ok` vector using an iterator. 
+    /// Turns the `ResultCollector<T>` into a `ResultCollector<(T, I)>`.
     /// This will return a cartesian product of both iterators
     /// 
     /// # Example
@@ -132,7 +134,8 @@ impl<T: Send + Sync + Clone> ResultCollector<T> {
 }
 
 impl<T: Send + Sync> ResultCollector<Vec<T>> {
-    /// Flatten a ResultCollector containing vectors into a plain vector
+    /// Flatten a ResultCollector containing vectors into a plain vector.
+    /// Turning `ResultCollector<Vec<T>>` into `ResultCollector<T>`
     /// 
     /// # Example
     /// ```
@@ -189,9 +192,10 @@ impl<T: Send + Sync> From<Vec<T>> for ResultCollector<T> {
 }
 
 impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<T> {
-    /// Transform all success elements of this collector using a closure.
-    /// The closure is expected to return a Result, each error will be collected into the 
-    /// errors vec, Ok variants are pushed to the successes vec
+    /// Transform all success elements of this collector using a closure. Turning
+    /// this `ResultCollector<T>` into `ResultCollector<I>`
+    /// The closure is expected to return a `Result`, each error will be collected into the 
+    /// errors `Vec`, `Ok` variants are pushed to the successes vec
     /// 
     /// # Example
     /// ```
@@ -203,7 +207,7 @@ impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<T> {
     /// assert_eq!(transformed.successes, vec![2, 3]);
     /// ```
     /// 
-    /// Errors get collected, and the Ok vector loses the failed value
+    /// Errors get collected, and the `Ok`` vector loses the failed value
     /// ```
     /// let collector = ResultCollector::from(vec!["a"]);
     /// let transformed: ResultCollector<&str> = collector.transform(|_| Err(anyhow!("fail")));
@@ -220,7 +224,7 @@ impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<T> {
 
 impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T> {
     /// Transform this ResultCollector into another ResultCollector using a
-    /// closure that returns a future.
+    /// closure that returns a future. Turning this `ResultCollector<T>` into `ResultCollector<I>`
     /// Ratelimiter is used to expose control over the execution of the futures
     async fn transform_async<F, R>(self, func: impl Fn(T) -> F, rate_limiter: &R) -> ResultCollector<I>
     where
@@ -331,9 +335,7 @@ mod tests {
 
         collector.extend(other);
 
-        let str_errors = collector.list_error_messages();
-
         assert_eq!(collector.successes, vec![1, 2, 3, 4]);
-        assert_eq!(str_errors, vec!["oops".to_owned(), "oops2".to_owned()]);
+        assert_eq!(collector.list_error_messages(), vec!["oops".to_owned(), "oops2".to_owned()]);
     }
 }
