@@ -39,3 +39,21 @@ func GetProductsFromDb(db *gorm.DB) ([]models.Product, error) {
 
 	return products, nil
 }
+
+func GetScrapeErrorsFromDb(db *gorm.DB) ([]dto.ScrapeError, error) {
+	var errors []dto.ScrapeError
+
+	result := db.Find(&errors)
+	if result.Error != nil { return nil, result.Error }
+
+	return errors, nil
+}
+
+func GetProductsByStore(db *gorm.DB, storeName string) ([]dto.Product, error) {
+	var products []dto.Product
+
+	result := db.Where("store = ?", storeName).Find(&products)
+	if result.Error != nil { return nil, result.Error }
+
+	return products, nil
+}

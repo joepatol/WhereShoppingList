@@ -1,6 +1,6 @@
 use anyhow::Result;
 use log::info;
-use scrape_core::{Scraper, ProductInfo, RateLimiter, HtmlLoader};
+use scrape_core::{HtmlLoader, ProductInfo, RateLimiter, ResultCollector, AsyncTransform, Scraper};
 use scrape_core::scrape_utils::build_selector;
 use super::parse::{get_name, get_price, get_nr_pages, get_product_url};
 
@@ -20,31 +20,27 @@ impl<'a, T: HtmlLoader + Send + Sync> JumboScraper<'a, T> {
     }
 
     async fn scrape_page(&self, offset: String) -> Result<Vec<ProductInfo>> {
-        let mut url = String::new();
-        for slice in [URL, OFFSET_URL, &offset] {
-            url.push_str(slice);
-        }
-        let mut products = Vec::new();
+        let url = format!("{}{}{}", URL, OFFSET_URL, offset);
         
         let document = self.connector.load(url.clone()).await?;
         let selector = build_selector("article.product-container", SRC)?;
         let html_products = document.select(&selector);
     
-        for html_product in html_products.into_iter() {
-            let product = ProductInfo::new(
+        html_products
+            .into_iter()
+            .map(|html_product| -> Result<ProductInfo> {
+                Ok(ProductInfo::new(
                 get_name(html_product)?,
                 get_price(html_product)?,
                 get_product_url(html_product)?
-            );
-            products.push(product);
-        };
-        info!(target: SRC, "Scraped url {}", url);
-        Ok(products)
+                ))
+            })
+            .collect()
     }
 }
 
 impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
-    async fn scrape(&self, max_requests: Option<usize>, rate_limiter: &RateLimiter) -> Result<Vec<ProductInfo>> {
+    async fn scrape<R: RateLimiter + Send + Sync>(&self, max_requests: Option<usize>, rate_limiter: &R) -> ResultCollector<ProductInfo> {
         info!(target: SRC, "Start scraping");
         let max_nr_requests: usize;
     
@@ -56,23 +52,29 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
 
         // scraper::Html is not Send, so get it in it's own scope so we don't carry it
         // across an await point
-        let total_products: usize;
+        let nr_pages: usize;
         {
-            let document = self.connector.load(URL.to_owned()).await?;
-            let nr_pages: usize = get_nr_pages(&document)?;
-            total_products = nr_pages * PRODUCTS_PER_PAGE;
-        }
-        
-        let mut loaded_nr_products = 0;
-        let mut futures = Vec::new();
-
-        while loaded_nr_products < total_products {
-            futures.push(self.scrape_page(loaded_nr_products.to_string()));
-            if futures.len() == max_nr_requests - 1 {
-                break
+            let document = match self.connector.load(URL.to_owned()).await {
+                Ok(html) => html,
+                Err(e) => return ResultCollector::from(e)
             };
-            loaded_nr_products += PRODUCTS_PER_PAGE;
-        };
-        Ok(rate_limiter.run(futures).await?)
+            nr_pages = match get_nr_pages(&document) {
+                Ok(nr) => nr,
+                Err(e) => return ResultCollector::from(e),
+            };
+        }
+
+        let mut offsets = (0..nr_pages)
+            .map(|e| (e * PRODUCTS_PER_PAGE).to_string())
+            .collect::<Vec<String>>();
+        
+        if offsets.len() > max_nr_requests {
+            offsets = offsets[0..max_nr_requests].iter().cloned().collect();
+        }
+
+        ResultCollector::from(offsets)
+            .transform_async(|i| self.scrape_page(i), rate_limiter)
+            .await
+            .flatten()
     }
 }
