@@ -21,22 +21,21 @@ impl<'a, T: HtmlLoader + Send + Sync> JumboScraper<'a, T> {
 
     async fn scrape_page(&self, offset: String) -> Result<Vec<ProductInfo>> {
         let url = format!("{}{}{}", URL, OFFSET_URL, offset);
-        let mut products = Vec::new();
         
         let document = self.connector.load(url.clone()).await?;
         let selector = build_selector("article.product-container", SRC)?;
         let html_products = document.select(&selector);
     
-        for html_product in html_products.into_iter() {
-            let product = ProductInfo::new(
+        html_products
+            .into_iter()
+            .map(|html_product| -> Result<ProductInfo> {
+                Ok(ProductInfo::new(
                 get_name(html_product)?,
                 get_price(html_product)?,
                 get_product_url(html_product)?
-            );
-            products.push(product);
-        };
-        info!(target: SRC, "Scraped url {}", url);
-        Ok(products)
+                ))
+            })
+            .collect()
     }
 }
 

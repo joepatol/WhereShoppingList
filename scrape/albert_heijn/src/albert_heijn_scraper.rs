@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use log::info;
 use scrape_core::scrape_utils::build_selector;
 use scrape_core::{AsyncTransform, HtmlLoader, ProductInfo, RateLimiter, ResultCollector, Scraper};
@@ -41,18 +41,16 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
         )?;
         let product_containers = document.select(&product_container_selector);
 
-        let mut products = Vec::new();
-        for product_container in product_containers.into_iter() {
-            products.push(ProductInfo::new(
-                get_product_name(product_container)?,
-                get_price(product_container)?,
-                get_product_url(product_container)?,
-            ));
-        };
-        if products.len() == 0 {
-            return Err(anyhow!("Found 0 products at {}", url));
-        }
-        Ok(products)  
+        product_containers
+            .into_iter()
+            .map(|product_container| -> Result<ProductInfo> {
+                Ok(ProductInfo::new(
+                    get_product_name(product_container)?,
+                    get_price(product_container)?,
+                    get_product_url(product_container)?,
+                ))
+            })
+            .collect()
     }
 }
 

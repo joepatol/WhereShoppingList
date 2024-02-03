@@ -66,7 +66,9 @@ impl<T: Send + Sync + Clone> ResultCollector<T> {
         II: Send + Sync,
     {
         self.transform(| success_element | 
-            iter.clone().map(|iter_element| Ok((success_element.clone(), iter_element)))
+            iter.clone().map(|iter_element| 
+                Ok((success_element.clone(), iter_element))
+            )
             .collect::<Result<Vec<(T, II)>>>())
             .flatten()        
     }
@@ -126,6 +128,12 @@ impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<T> {
     }
 }
 
+impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<Vec<T>> {
+    fn transform(self, func: impl Fn(T) -> Result<I, anyhow::Error>) -> ResultCollector<I> {
+        self.flatten().transform(func)
+    }
+}
+
 impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T> {
     async fn transform_async<F, R>(self, func: impl Fn(T) -> F, rate_limiter: &R) -> ResultCollector<I>
     where
@@ -146,5 +154,15 @@ impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T>
 
         results.errors.extend(self.errors);
         results
+    }
+}
+
+impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<Vec<T>> {
+    async fn transform_async<F, R>(self, func: impl Fn(T) -> F + Send + Sync, rate_limiter: &R) -> ResultCollector<I>
+    where
+        F: Future<Output = Result<I, anyhow::Error>> + Send + Sync,
+        R: RateLimiter + Send + Sync, 
+    {
+        self.flatten().transform_async(func, rate_limiter).await
     }
 }
