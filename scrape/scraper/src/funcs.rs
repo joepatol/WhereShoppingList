@@ -15,8 +15,7 @@ pub async fn scrape(config: ScrapeConfig) -> Result<()> {
     tables::truncate_all(&pool).await?;
     info!("Assembling scrapers...");
     info!("Scraping...");
-    let rate_limiter = SemaphoreRateLimiter::new(config.max_concurrent_requests);
-    run_scrapers(&config, &rate_limiter, &pool).await?;
+    run_scrapers(&config, &pool).await?;
     info!("All done");
     pool.close().await;
     Ok(())
@@ -24,9 +23,10 @@ pub async fn scrape(config: ScrapeConfig) -> Result<()> {
 
 async fn run_scrapers(
     cfg: &ScrapeConfig,
-    rate_limiter: &SemaphoreRateLimiter,
     pool: &PgPool,
 ) -> Result<()> {
+    let rate_limiter = SemaphoreRateLimiter::new(cfg.max_concurrent_requests);
+
     let mut db_products;
     let mut errors;
 
@@ -38,9 +38,9 @@ async fn run_scrapers(
     let ah_connector = ReqwestHtmlLoader::new(&ah_client);
 
     (db_products, errors) = run_scraper(
-        cfg, 
+        cfg.max_requests, 
         AlbertHeijnScraper::new(&ah_connector), 
-        rate_limiter, 
+        &rate_limiter, 
         "Albert Heijn")
         .await;
     
@@ -52,9 +52,9 @@ async fn run_scrapers(
     let jumbo_connector = ReqwestHtmlLoader::new(&jumbo_client);
 
     (db_products, errors) = run_scraper(
-        cfg, 
+        cfg.max_requests, 
         JumboScraper::new(&jumbo_connector), 
-        rate_limiter, 
+        &rate_limiter, 
         "Jumbo")
         .await;
 
@@ -66,25 +66,14 @@ async fn run_scrapers(
 }
 
 async fn run_scraper(
-    cfg: &ScrapeConfig, 
+    max_requests: Option<usize>, 
     scraper: impl Scraper,
     rate_limiter: &SemaphoreRateLimiter,
     scraper_name: &str,
 ) -> (Vec<InDbProduct>, Vec<InDbError>) {
-    let results = scraper.scrape(cfg.max_requests, rate_limiter).await;
-    let (ok_iter, err_iter) = results.split_into_iter();
-    
-    let products: Vec<InDbProduct> = 
-        ok_iter
-        .map(|p| 
-            InDbProduct::new(scraper_name.to_string(), p)
-        )
-        .collect();
-
-    let errors: Vec<InDbError> = 
-        err_iter
-        .map(|e| InDbError::new(scraper_name.to_string(), e.to_string()))
-        .collect();
-
-    (products, errors)
+    let results = scraper.scrape(max_requests, rate_limiter).await;
+    results.map_extract(
+       |p| InDbProduct::new(scraper_name.to_string(), p),
+       |e| InDbError::new(scraper_name.to_string(), e.to_string())
+    )
 }

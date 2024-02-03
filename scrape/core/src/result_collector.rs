@@ -57,6 +57,14 @@ impl<T: Send + Sync> ResultCollector<T> {
     pub fn iter_ok(&self) -> impl Iterator<Item = &T> {
         self.successes.iter()
     }
+
+    pub fn map_extract<I, E>(self, ok_func: impl Fn(T) -> I, err_func: impl Fn(anyhow::Error) -> E) -> (Vec<I>, Vec<E>) {
+        let (ok_iter, err_iter) = self.split_into_iter();
+        (
+            ok_iter.map(ok_func).collect(),
+            err_iter.map(err_func).collect(),
+        )
+    }
 }
 
 impl<T: Send + Sync + Clone> ResultCollector<T> {
@@ -128,12 +136,6 @@ impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<T> {
     }
 }
 
-impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<Vec<T>> {
-    fn transform(self, func: impl Fn(T) -> Result<I, anyhow::Error>) -> ResultCollector<I> {
-        self.flatten().transform(func)
-    }
-}
-
 impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T> {
     async fn transform_async<F, R>(self, func: impl Fn(T) -> F, rate_limiter: &R) -> ResultCollector<I>
     where
@@ -154,15 +156,5 @@ impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T>
 
         results.errors.extend(self.errors);
         results
-    }
-}
-
-impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<Vec<T>> {
-    async fn transform_async<F, R>(self, func: impl Fn(T) -> F + Send + Sync, rate_limiter: &R) -> ResultCollector<I>
-    where
-        F: Future<Output = Result<I, anyhow::Error>> + Send + Sync,
-        R: RateLimiter + Send + Sync, 
-    {
-        self.flatten().transform_async(func, rate_limiter).await
     }
 }
