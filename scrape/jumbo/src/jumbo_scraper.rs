@@ -53,22 +53,20 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
 
         // scraper::Html is not Send, so get it in it's own scope so we don't carry it
         // across an await point
-        let total_products: usize;
+        let nr_pages: usize;
         {
             let document = match self.connector.load(URL.to_owned()).await {
                 Ok(html) => html,
                 Err(e) => return ResultCollector::from(e)
             };
-            let nr_pages = match get_nr_pages(&document) {
+            nr_pages = match get_nr_pages(&document) {
                 Ok(nr) => nr,
                 Err(e) => return ResultCollector::from(e),
             };
-            total_products = nr_pages * PRODUCTS_PER_PAGE;
         }
 
-        let mut offsets = (0..total_products)
-            .step_by(PRODUCTS_PER_PAGE)
-            .map(|e| e.to_string())
+        let mut offsets = (0..nr_pages)
+            .map(|e| (e * PRODUCTS_PER_PAGE).to_string())
             .collect::<Vec<String>>();
         
         if offsets.len() > max_nr_requests {
