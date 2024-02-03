@@ -11,6 +11,12 @@ pub struct SemaphoreRateLimiter {
     semaphore: Semaphore,
 }
 
+impl Default for SemaphoreRateLimiter {
+    fn default() -> Self {
+        SemaphoreRateLimiter::new(None)
+    }
+}
+
 impl SemaphoreRateLimiter {
     pub fn new(concurrent_requests: Option<usize>) -> Self {
         match concurrent_requests {

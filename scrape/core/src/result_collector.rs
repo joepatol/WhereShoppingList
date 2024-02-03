@@ -132,10 +132,13 @@ impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T>
         F: Future<Output = Result<I, anyhow::Error>> + Send + Sync,
         R: RateLimiter + Send + Sync, 
     {
-        let mut results: ResultCollector<I> = rate_limiter.run(
+        let mut results: ResultCollector<I> = rate_limiter
+            .run(
             self.successes
-            .into_iter()
-            .map(|inp| (func)(inp) ).collect())
+                .into_iter()
+                .map(|inp| (func)(inp) )
+                .collect()
+            )
             .await
             .into_iter()
             .flatten()
