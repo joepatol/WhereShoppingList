@@ -12,6 +12,6 @@ pub use error::{ScrapeError, DbError};
 pub use interface::{Scraper, HtmlLoader};
 pub use config::{ConfigBuilder, ScrapeConfig};
 pub use data::{ProductInfo, InDbProduct, InDbError};
-pub use rate_limiter::{RateLimiter, SemaphoreRateLimiter};
+pub use rate_limiter::{RateLimiter, SimpleRateLimiter, RandomDelayRateLimiter};
 pub use connector::ReqwestHtmlLoader;
 pub use result_collector::{ResultCollector, Transform, AsyncTransform};

@@ -1,7 +1,7 @@
 use log::info;
 use jumbo::JumboScraper;
 use albert_heijn::AlbertHeijnScraper;
-use scrape_core::{SemaphoreRateLimiter, Scraper};
+use scrape_core::{RandomDelayRateLimiter, RateLimiter, Scraper, SimpleRateLimiter};
 use sql::{tables, self, PgPool};
 use anyhow::Result;
 use scrape_core::{InDbProduct, InDbError, ScrapeConfig, ReqwestHtmlLoader, RequestClient, request_header, RequestClientBuilder};
@@ -25,7 +25,9 @@ async fn run_scrapers(
     cfg: &ScrapeConfig,
     pool: &PgPool,
 ) -> Result<()> {
-    let rate_limiter = SemaphoreRateLimiter::new(cfg.max_concurrent_requests);
+    let delay_rate_limiter = RandomDelayRateLimiter::new(
+        cfg.max_concurrent_requests, 100, 2500,
+    );
 
     let mut db_products;
     let mut errors;
@@ -40,13 +42,15 @@ async fn run_scrapers(
     (db_products, errors) = run_scraper(
         cfg.max_requests, 
         AlbertHeijnScraper::new(&ah_connector), 
-        &rate_limiter, 
+        &delay_rate_limiter, 
         "Albert Heijn")
         .await;
     
     info!("Writing new scrapes to db...");
     tables::products::insert(&db_products, pool).await?;
     tables::scrape_errors::insert(&errors, pool).await?;
+
+    let rate_limiter = SimpleRateLimiter::new(cfg.max_concurrent_requests);
 
     let jumbo_client = RequestClient::new();
     let jumbo_connector = ReqwestHtmlLoader::new(&jumbo_client);
@@ -65,10 +69,10 @@ async fn run_scrapers(
     Ok(())
 }
 
-async fn run_scraper(
+async fn run_scraper<R: RateLimiter + Send + Sync>(
     max_requests: Option<usize>, 
     scraper: impl Scraper,
-    rate_limiter: &SemaphoreRateLimiter,
+    rate_limiter: &R,
     scraper_name: &str,
 ) -> (Vec<InDbProduct>, Vec<InDbError>) {
     let results = scraper.scrape(max_requests, rate_limiter).await;
