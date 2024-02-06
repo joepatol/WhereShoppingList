@@ -52,6 +52,13 @@ impl<T: Send + Sync> ResultCollector<T> {
         }
     }
 
+    pub fn from_value(value: T) -> ResultCollector<T> {
+        ResultCollector {
+            successes: vec![value],
+            errors: Vec::new(),
+        }
+    }
+
     /// Split the ResultCollector into two iterators over 
     /// the Err and Ok variants
     pub fn split_into_iter(self) -> (impl Iterator<Item = T>, impl Iterator<Item = anyhow::Error>) {
@@ -162,19 +169,6 @@ impl<T: Send + Sync> FromIterator<Result<T, anyhow::Error>> for ResultCollector<
     }
 }
 
-impl<T: Send + Sync> FromIterator<Result<Vec<T>, anyhow::Error>> for ResultCollector<T> {
-    fn from_iter<I: IntoIterator<Item = Result<Vec<T>, anyhow::Error>>>(iter: I) -> Self {
-        let mut collector = ResultCollector::new();
-        for result in iter {
-            match result {
-                Ok(v) => collector.successes.extend(v),
-                Err(e) => collector.errors.push(e)
-            }
-        }
-        collector
-    }
-}
-
 impl<T: Send + Sync> From<anyhow::Error> for ResultCollector<T> {
     fn from(error: anyhow::Error) -> Self {
         let mut collector = ResultCollector::new();
@@ -254,7 +248,7 @@ impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T>
 mod tests {
     use std::vec;
     use anyhow::{anyhow, Result};
-    use crate::Transform;
+    use crate::{AsyncTransform, SimpleRateLimiter, Transform};
     use super::ResultCollector;
 
     fn test_func(val: i32) -> Result<Vec<i32>> {
@@ -262,6 +256,28 @@ mod tests {
             return Err(anyhow!("{}", val));
         };
         Ok(vec![val, val + 1])
+    }
+
+    async fn test_async_fn(val: i32) -> Result<Vec<i32>> {
+        if val <= 0 {
+            return Err(anyhow!("{}", val));
+        };
+        Ok(vec![val, val + 1])
+    }
+
+    #[test]
+    fn test_from_value() {
+        let collector = ResultCollector::from_value(1);
+        assert_eq!(collector.successes, vec![1]);
+    }
+
+    #[tokio::test]
+    async fn test_transform_async() {
+        let rate_limiter = SimpleRateLimiter::new(None);
+        let collector = ResultCollector::from(vec![-1, 0, 1, 3]);
+        let result = collector.transform_async(|e| test_async_fn(e), &rate_limiter).await.flatten();
+        assert_eq!(result.successes, vec![1, 2, 3, 4]);
+        assert_eq!(result.list_error_messages(), vec!["-1".to_owned(), "0".to_owned()]);
     }
 
     #[test]

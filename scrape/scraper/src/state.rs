@@ -1,6 +1,4 @@
-use std::sync::Arc;
-use tokio::sync::Mutex;
-
+use std::sync::{Arc, Mutex};
 use crate::response::ScraperState;
 
 #[derive(Clone)]
@@ -13,13 +11,17 @@ impl<T: Clone + Send> StateKeeper<T> {
         StateKeeper { state: Arc::new(Mutex::new(val)) }
     }
 
-    pub async fn change_state(&self, new_state: T) {
-        let mut state = self.state.lock().await;
+    pub fn change_state(&self, new_state: T) {
+        let mut state = self.state
+            .lock()
+            .expect("Thread panicked, Mutex is in unrecoverable state");
         *state = new_state;
     }
 
-    pub async fn get_state(&self) -> T {
-        let state = self.state.lock().await;
+    pub fn get_state(&self) -> T {
+        let state = self.state
+            .lock()
+            .expect("Thread panicked, Mutex is in unrecoverable state");
         state.clone()
     }
 }

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use log::info;
 use scrape_core::scrape_utils::build_selector;
-use scrape_core::{AsyncTransform, HtmlLoader, ProductInfo, RateLimiter, ResultCollector, Scraper};
+use scrape_core::{AsyncTransform, HtmlLoader, ProductInfo, RateLimiter, ResultCollector, ScrapeError, Scraper};
 use super::parse::{get_product_name, get_price, get_links, get_product_url};
 
 pub const BASE_URL: &str = "https://www.ah.nl";
@@ -41,7 +41,7 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
         )?;
         let product_containers = document.select(&product_container_selector);
 
-        product_containers
+        let result: Result<Vec<ProductInfo>> = product_containers
             .into_iter()
             .map(|product_container| -> Result<ProductInfo> {
                 Ok(ProductInfo::new(
@@ -50,7 +50,17 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
                     get_product_url(product_container)?,
                 ))
             })
-            .collect()
+            .collect();
+
+        match result {
+            Ok(products) => {
+                if products.len() == 0 {
+                    return Err(ScrapeError::InvalidStructureAssumed { src: SRC.to_owned() }.into())
+                };
+                Ok(products)
+            },
+            Err(e) => Err(e)
+        }
     }
 }
 
@@ -65,7 +75,12 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for AlbertHeijnScraper<'a, T> {
         };
         info!("Limited number of requests to {}", &max_nr_requests);
 
-        let iterator = (0..85).collect::<Vec<usize>>().into_iter();
+        let mut iterator = (0..85).collect::<Vec<usize>>().into_iter();
+        if iterator.len() * LETTERS.len() > max_nr_requests - LETTERS.len() {
+            let len_limit = (max_nr_requests - LETTERS.len()) / LETTERS.len();
+            iterator = iterator.take(len_limit).collect::<Vec<usize>>().into_iter();
+        }
+
         ResultCollector::from(LETTERS.to_vec())
             .transform_async(|l| self.scrape_brand_urls_for_letter(l), rate_limiter)
             .await
