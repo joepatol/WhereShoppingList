@@ -1,6 +1,3 @@
--- For testing, just drop & recreate on startup
-DROP TABLE IF EXISTS products;
-
 CREATE TABLE IF NOT EXISTS products (
     ID SERIAL,
     Name VARCHAR(255),
@@ -19,3 +16,11 @@ CREATE TABLE IF NOT EXISTS scrape_errors (
     Scraper VARCHAR(255),
     Message TEXT
 );
+
+CREATE TABLE IF NOT EXISTS users (
+    ID SERIAL,
+    FirstNname VARCHAR(255),
+    LastName VARCHAR(255),
+    Email VARCHAR(255),
+    Password VARCHAR(500)
+)

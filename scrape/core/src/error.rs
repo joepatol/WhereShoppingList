@@ -7,6 +7,11 @@ pub enum ScrapeError {
         src: String,
         err: String,
     },
+    #[error("Couldn't find products at: {src}, for {url}")]
+    NoProductsFound {
+        src: String,
+        url: String,
+    },
     #[error("The HTML structure assumed in the '{src}' scraper failed.")]
     InvalidStructureAssumed {
         src: String,

@@ -4,7 +4,7 @@ mod state;
 
 use log::{info, LevelFilter};
 use serde_json::json;
-use simple_logger::SimpleLogger;
+use simplelog::{Config, SimpleLogger};
 use warp::{Filter, Rejection, Reply, http::Response};
 use funcs::scrape;
 use scrape_core::ConfigBuilder;
@@ -17,8 +17,9 @@ type Result<T> = std::result::Result<T, Rejection>;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
-    log::set_boxed_logger(Box::new(SimpleLogger::new()))
-        .map(|()| log::set_max_level(LevelFilter::Info))
+    let std_out_logger = SimpleLogger::new(LevelFilter::Info, Config::default());
+    
+    log::set_boxed_logger(std_out_logger)
         .expect("Failed to initialize logger");
 
     let state_keeper = StateKeeper::default();

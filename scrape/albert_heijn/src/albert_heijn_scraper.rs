@@ -55,7 +55,7 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
         match result {
             Ok(products) => {
                 if products.len() == 0 {
-                    return Err(ScrapeError::InvalidStructureAssumed { src: SRC.to_owned() }.into())
+                    return Err(ScrapeError::NoProductsFound { src: SRC.to_owned(), url }.into())
                 };
                 Ok(products)
             },
