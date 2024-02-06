@@ -12,9 +12,10 @@ pub enum ScrapeError {
         src: String,
         url: String,
     },
-    #[error("The HTML structure assumed in the '{src}' scraper failed.")]
+    #[error("The HTML structure assumed in the '{src}' scraper failed. Info: {info}")]
     InvalidStructureAssumed {
         src: String,
+        info: String,
     },
     #[error("Failed to parse a scraped string value in the '{src}' scraper. Message: {err}")]
     FailedToParseStringValue {

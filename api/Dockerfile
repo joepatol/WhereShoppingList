@@ -1,14 +1,22 @@
-# syntax=docker/dockerfile:1
+# Go Version
+FROM golang:1.21-rc-alpine3.17
 
-FROM golang:1.21
+# Environment variables which CompileDaemon requires to run
+ENV PROJECT_DIR=/app \
+    GO111MODULE=on \
+    CGO_ENABLED=0
 
+# Basic setup of the container
+RUN mkdir /app
+COPY .. /app
 WORKDIR /app
 
-# Download Go modules
-COPY ./src ./
-RUN go mod download
+# Get CompileDaemon
+RUN go get github.com/githubnemo/CompileDaemon
+RUN go install github.com/githubnemo/CompileDaemon
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /supermarkt-api
+ENV GOOS "linux"
 
-EXPOSE 8080
-CMD ["/supermarkt-api"]
+# The build flag sets how to build after a change has been detected in the source code
+# The command flag sets how to run the app after it has been built
+CMD ["./supermarkt-api"]

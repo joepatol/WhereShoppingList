@@ -34,7 +34,8 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
 
     async fn scrape_page_with_offset(&self, url: String, offset: usize) -> Result<Vec<ProductInfo>> {
         let offset_url = format!("{}{}{}{}", url, PAGE_PART, offset.to_string(), OFFSET_PART);
-        let document = self.connector.load(offset_url).await?;
+        info!("Scraping url {}", &offset_url);
+        let document = self.connector.load(offset_url.clone()).await?;
         let product_container_selector = build_selector(
             "article", 
             SRC
@@ -55,7 +56,7 @@ impl<'a, T: HtmlLoader + Send + Sync> AlbertHeijnScraper<'a, T> {
         match result {
             Ok(products) => {
                 if products.len() == 0 {
-                    return Err(ScrapeError::NoProductsFound { src: SRC.to_owned(), url }.into())
+                    return Err(ScrapeError::NoProductsFound { src: SRC.to_owned(), url: offset_url }.into())
                 };
                 Ok(products)
             },
@@ -75,7 +76,7 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for AlbertHeijnScraper<'a, T> {
         };
         info!("Limited number of requests to {}", &max_nr_requests);
 
-        let mut iterator = (0..85).collect::<Vec<usize>>().into_iter();
+        let mut iterator = (0..10).collect::<Vec<usize>>().into_iter();
         if iterator.len() * LETTERS.len() > max_nr_requests - LETTERS.len() {
             let len_limit = (max_nr_requests - LETTERS.len()) / LETTERS.len();
             iterator = iterator.take(len_limit).collect::<Vec<usize>>().into_iter();

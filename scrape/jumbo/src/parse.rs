@@ -14,7 +14,7 @@ pub fn get_product_url(element: ElementRef) -> Result<String> {
     let link_html = walk_selectors(element, &[selector], SRC)?;
     let link = link_html
         .attr("href")
-        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string() })?;
+        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string(), info: String::from("href") })?;
     let mut prod_url = BASE_URL.to_owned();
     prod_url.push_str(link);
     Ok(prod_url)
@@ -38,7 +38,7 @@ pub fn get_nr_pages(document: &Html) -> Result<usize> {
     let last: String = pages_grid
         .select(&btn_selector)
         .last()
-        .ok_or(ScrapeError::InvalidStructureAssumed{ src: SRC.to_string()})?
+        .ok_or(ScrapeError::InvalidStructureAssumed{ src: SRC.to_string(), info: String::from("Last in nr pages") })?
         .text()
         .collect();
 

@@ -21,6 +21,7 @@ impl<'a, T: HtmlLoader + Send + Sync> JumboScraper<'a, T> {
 
     async fn scrape_page(&self, offset: String) -> Result<Vec<ProductInfo>> {
         let url = format!("{}{}{}", URL, OFFSET_URL, offset);
+        info!("Scraping url {}", &url);
         
         let document = self.connector.load(url.clone()).await?;
         let selector = build_selector("article.product-container", SRC)?;

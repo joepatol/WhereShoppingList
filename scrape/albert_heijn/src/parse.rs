@@ -10,7 +10,7 @@ pub fn get_product_url(element: ElementRef) -> Result<String> {
     let link_html = walk_selectors(element, &[selector], SRC)?;
     let link = link_html
         .attr("href")
-        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string() })?;
+        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string(), info: String::from("href") })?;
     let mut prod_url = BASE_URL.to_owned();
     prod_url.push_str(link);
     Ok(prod_url)
@@ -27,14 +27,10 @@ pub fn get_links(element: ElementRef) -> Result<Vec<String>> {
         .map(|l| l
             .value()
             .attr("href")
-            .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string() }))
+            .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string(), info: String::from("href") }))
         .collect::<Result<Vec<&str>, ScrapeError>>()?
         .into_iter()
-        .map(|e| {
-            let mut url = BASE_URL.to_string();
-            url.push_str(e);
-            url
-        })
+        .map(|e| format!("{}{}", BASE_URL, e))
         .collect()
     )
 }
@@ -43,7 +39,7 @@ pub fn get_product_name(element: ElementRef) -> Result<String> {
     let info_selector = build_selector("a", SRC)?;
     let product_name = walk_selectors(element, &[info_selector], SRC)?
         .attr("title")
-        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string() })?;
+        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string(), info: String::from("title") })?;
     Ok(product_name.to_owned())
 }
 
@@ -52,7 +48,7 @@ pub fn get_price(element: ElementRef) -> Result<f32> {
     let price_str: String = element
         .select(&price_selector)
         .last()
-        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string() })?
+        .ok_or(ScrapeError::InvalidStructureAssumed { src: SRC.to_string(), info: String::from("last in price") })?
         .text()
         .collect::<String>();
 

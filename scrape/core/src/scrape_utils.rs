@@ -1,4 +1,4 @@
-use scraper::{ElementRef, Selector};
+use scraper::{selector::ToCss, ElementRef, Selector};
 use super::ScrapeError;
 use anyhow::Result;
 
@@ -24,7 +24,7 @@ pub fn walk_selectors<'a>(mut element: ElementRef<'a>, selectors: &[Selector], s
         element = element
         .select(&selector)
         .next()
-        .ok_or(ScrapeError::InvalidStructureAssumed{ src: src.to_string() })?;
+        .ok_or(ScrapeError::InvalidStructureAssumed{ src: src.to_string(), info: selector.to_css_string() })?;
     }
     Ok(element)
 }

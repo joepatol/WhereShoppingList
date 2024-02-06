@@ -13,7 +13,6 @@ pub async fn scrape(config: ScrapeConfig) -> Result<()> {
     info!("Using configuration: {:?}", &config);
     info!("Clearing tables");
     tables::truncate_all(&pool).await?;
-    info!("Assembling scrapers...");
     info!("Scraping...");
     run_scrapers(&config, &pool).await?;
     info!("All done");
@@ -26,7 +25,7 @@ async fn run_scrapers(
     pool: &PgPool,
 ) -> Result<()> {
     let delay_rate_limiter = RandomDelayRateLimiter::new(
-        cfg.max_concurrent_requests, 100, 2500,
+        cfg.max_concurrent_requests, 100, 5000,
     );
 
     let mut db_products;
@@ -46,6 +45,7 @@ async fn run_scrapers(
         "Albert Heijn")
         .await;
     
+    info!("Done, got {} errors and {} successes", errors.len(), db_products.len());
     info!("Writing new scrapes to db...");
     tables::products::insert(&db_products, pool).await?;
     tables::scrape_errors::insert(&errors, pool).await?;
@@ -62,6 +62,7 @@ async fn run_scrapers(
         "Jumbo")
         .await;
 
+    info!("Done, got {} errors and {} successes", errors.len(), db_products.len());
     info!("Writing new scrapes to db...");
     tables::products::insert(&db_products, pool).await?;
     tables::scrape_errors::insert(&errors, pool).await?;

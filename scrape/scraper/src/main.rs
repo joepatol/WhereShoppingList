@@ -4,7 +4,7 @@ mod state;
 
 use log::{info, LevelFilter};
 use serde_json::json;
-use simplelog::{Config, SimpleLogger};
+use simple_logger::SimpleLogger;
 use warp::{Filter, Rejection, Reply, http::Response};
 use funcs::scrape;
 use scrape_core::ConfigBuilder;
@@ -17,9 +17,8 @@ type Result<T> = std::result::Result<T, Rejection>;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
-    let std_out_logger = SimpleLogger::new(LevelFilter::Info, Config::default());
-    
-    log::set_boxed_logger(std_out_logger)
+    log::set_boxed_logger(Box::new(SimpleLogger::new()))
+        .map(|()| log::set_max_level(LevelFilter::Info))
         .expect("Failed to initialize logger");
 
     let state_keeper = StateKeeper::default();
@@ -67,26 +66,26 @@ async fn health_check() -> Result<impl Reply> {
 }
 
 async fn get_handler_state(state_keeper: StateKeeper<ScraperState>) -> Result<impl Reply>  {
-    let scraper_state = state_keeper.get_state();
+    let scraper_state = state_keeper.get_state().await;
     let response = ScraperStateResponse::new(scraper_state);
     Ok(Response::builder().body(serde_json::to_string(&response).unwrap()))
 }
 
 async fn handler(state_keeper: StateKeeper<ScraperState>) {
-    if state_keeper.get_state() == ScraperState::Running {
+    if state_keeper.get_state().await == ScraperState::Running {
         return
     }
 
-    state_keeper.change_state(ScraperState::Running);
+    state_keeper.change_state(ScraperState::Running).await;
     let config = ConfigBuilder::new()
         .max_concurrent_requests(50)
         .build();
 
     match scrape(config).await {
-        Ok(_) => { state_keeper.change_state(ScraperState::Success) },
+        Ok(_) => { state_keeper.change_state(ScraperState::Success).await },
         Err(e) => { 
             info!("Scraping failed, message: {}", e);
-            state_keeper.change_state(ScraperState::Failed) 
+            state_keeper.change_state(ScraperState::Failed).await 
         },
     };
 }

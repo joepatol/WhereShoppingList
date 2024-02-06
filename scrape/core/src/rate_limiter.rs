@@ -61,7 +61,11 @@ impl RandomDelayRateLimiter {
     }
 
     async fn run_one<T>(&self, future: impl Future<Output = T> + Send + Sync) -> Result<T> {
-        let delay_seconds = rand::thread_rng().gen_range(self.min_delay_ms..self.max_delay_ms + 1);
+        let delay_seconds;
+        {
+            let rnd = rand::thread_rng().gen_range(self.min_delay_ms..self.max_delay_ms + 1);
+            delay_seconds = rnd.clone();
+        }
         let permit = self.semaphore.acquire().await?;
         tokio::time::sleep(tokio::time::Duration::from_millis(delay_seconds as u64)).await;
         let future_result = future.await;
