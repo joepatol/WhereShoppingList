@@ -66,26 +66,26 @@ async fn health_check() -> Result<impl Reply> {
 }
 
 async fn get_handler_state(state_keeper: StateKeeper<ScraperState>) -> Result<impl Reply>  {
-    let scraper_state = state_keeper.get_state().await;
+    let scraper_state = state_keeper.get_state();
     let response = ScraperStateResponse::new(scraper_state);
     Ok(Response::builder().body(serde_json::to_string(&response).unwrap()))
 }
 
 async fn handler(state_keeper: StateKeeper<ScraperState>) {
-    if state_keeper.get_state().await == ScraperState::Running {
+    if state_keeper.get_state() == ScraperState::Running {
         return
     }
 
-    state_keeper.change_state(ScraperState::Running).await;
+    state_keeper.change_state(ScraperState::Running);
     let config = ConfigBuilder::new()
         .max_concurrent_requests(50)
         .build();
 
     match scrape(config).await {
-        Ok(_) => { state_keeper.change_state(ScraperState::Success).await },
+        Ok(_) => { state_keeper.change_state(ScraperState::Success) },
         Err(e) => { 
             info!("Scraping failed, message: {}", e);
-            state_keeper.change_state(ScraperState::Failed).await 
+            state_keeper.change_state(ScraperState::Failed) 
         },
     };
 }
