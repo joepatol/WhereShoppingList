@@ -38,6 +38,11 @@ impl<'a, T: HtmlLoader + Send + Sync> JumboScraper<'a, T> {
             })
             .collect()
     }
+
+    async fn scrape_nr_pages(&self) -> Result<usize> {
+        let document = self.connector.load(URL.to_owned()).await?;
+        Ok(get_nr_pages(&document)?)
+    }
 }
 
 impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
@@ -51,19 +56,11 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
         };
         info!("Limited number of requests to {}", &max_nr_requests);
 
-        // scraper::Html is not Send, so get it in it's own scope so we don't carry it
-        // across an await point
-        let nr_pages: usize;
-        {
-            let document = match self.connector.load(URL.to_owned()).await {
-                Ok(html) => html,
-                Err(e) => return ResultCollector::from(e)
-            };
-            nr_pages = match get_nr_pages(&document) {
-                Ok(nr) => nr,
-                Err(e) => return ResultCollector::from(e),
-            };
-        }
+        let nr_pages = match self.scrape_nr_pages().await {
+            Ok(amt) => amt,
+            Err(e) => return ResultCollector::from(e),
+        };
+        info!("Found {} pages", &nr_pages);
 
         let mut offsets = (0..nr_pages)
             .map(|e| (e * PRODUCTS_PER_PAGE).to_string())

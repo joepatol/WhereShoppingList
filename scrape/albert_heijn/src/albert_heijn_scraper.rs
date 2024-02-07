@@ -76,7 +76,8 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for AlbertHeijnScraper<'a, T> {
         };
         info!("Limited number of requests to {}", &max_nr_requests);
 
-        let mut iterator = (0..10).collect::<Vec<usize>>().into_iter();
+        // TODO: get the actual required iterations of a url, iso hardcoding to 10
+        let mut iterator = (0..2).collect::<Vec<usize>>().into_iter();
         if iterator.len() * LETTERS.len() > max_nr_requests - LETTERS.len() {
             let len_limit = (max_nr_requests - LETTERS.len()) / LETTERS.len();
             iterator = iterator.take(len_limit).collect::<Vec<usize>>().into_iter();

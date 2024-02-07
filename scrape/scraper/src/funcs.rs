@@ -24,12 +24,29 @@ async fn run_scrapers(
     cfg: &ScrapeConfig,
     pool: &PgPool,
 ) -> Result<()> {
+    let mut db_products;
+    let mut errors;
+
+    let rate_limiter = SimpleRateLimiter::new(cfg.max_concurrent_requests);
+
+    let jumbo_client = RequestClient::new();
+    let jumbo_connector = ReqwestHtmlLoader::new(&jumbo_client);
+
+    (db_products, errors) = run_scraper(
+        cfg.max_requests, 
+        JumboScraper::new(&jumbo_connector), 
+        &rate_limiter, 
+        "Jumbo")
+        .await;
+
+    info!("Done, got {} errors and {} successes", errors.len(), db_products.len());
+    info!("Writing new scrapes to db...");
+    tables::products::insert(&db_products, pool).await?;
+    tables::scrape_errors::insert(&errors, pool).await?;
+
     let delay_rate_limiter = RandomDelayRateLimiter::new(
         cfg.max_concurrent_requests, 100, 5000,
     );
-
-    let mut db_products;
-    let mut errors;
 
     let mut headers = request_header::HeaderMap::new();
     headers.insert(request_header::CONNECTION, request_header::HeaderValue::from_static("keep-alive"));
@@ -45,23 +62,6 @@ async fn run_scrapers(
         "Albert Heijn")
         .await;
     
-    info!("Done, got {} errors and {} successes", errors.len(), db_products.len());
-    info!("Writing new scrapes to db...");
-    tables::products::insert(&db_products, pool).await?;
-    tables::scrape_errors::insert(&errors, pool).await?;
-
-    let rate_limiter = SimpleRateLimiter::new(cfg.max_concurrent_requests);
-
-    let jumbo_client = RequestClient::new();
-    let jumbo_connector = ReqwestHtmlLoader::new(&jumbo_client);
-
-    (db_products, errors) = run_scraper(
-        cfg.max_requests, 
-        JumboScraper::new(&jumbo_connector), 
-        &rate_limiter, 
-        "Jumbo")
-        .await;
-
     info!("Done, got {} errors and {} successes", errors.len(), db_products.len());
     info!("Writing new scrapes to db...");
     tables::products::insert(&db_products, pool).await?;

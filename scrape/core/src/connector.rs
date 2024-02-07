@@ -1,7 +1,7 @@
 use super::{HtmlLoader, ScrapeError};
 use anyhow::Result;
-use rand::Rng;
-use super::constants::USER_AGENTS;
+use rand::{Rng, SeedableRng};
+use super::constants::{USER_AGENTS, SEED32};
 use reqwest::header::{USER_AGENT, ACCEPT_LANGUAGE, REFERER, ACCEPT_ENCODING};
 
 pub struct ReqwestHtmlLoader<'a> {
@@ -20,12 +20,14 @@ impl<'a> HtmlLoader for ReqwestHtmlLoader<'a> {
     }
 }
 
+fn get_rand_user_agent() -> &'static str {
+    let idx = rand::rngs::StdRng::from_seed(SEED32).gen_range(0..USER_AGENTS.len());
+    USER_AGENTS[idx]
+}
+
 async fn get_html_document_from_url(client: &reqwest::Client, url: String) -> Result<scraper::Html> {
     // Fetch a html document using a client
-    let user_agent;
-    {
-        user_agent = USER_AGENTS[rand::thread_rng().gen_range(0..USER_AGENTS.len())];
-    }
+    let user_agent = get_rand_user_agent();
     let req = client
         .get(&url)
         .header(USER_AGENT, user_agent)

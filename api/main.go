@@ -10,9 +10,20 @@ import (
 	"gorm.io/gorm"
 )
 
+
+// Dependency injection
 type Depends struct {
 	Database *gorm.DB
 	Logger *log.Logger
+}
+
+// Helpers
+func sendResponseOrError (ctx *gin.Context, obj any, err error) {
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.IndentedJSON(http.StatusOK, obj)
+	}
 }
 
 func main() {
@@ -33,31 +44,20 @@ func main() {
     router.Run("localhost:8080")
 }
 
+// Route handlers
 func getScraperHealth(ctx *gin.Context) {
 	json, err := controller.GetScraperHealthCheck()
-	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.IndentedJSON(http.StatusOK, json)
-	}
+	sendResponseOrError(ctx, json, err)
 }
 
 func startScraper(ctx *gin.Context) {
 	json, err := controller.StartScraper()
-	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.IndentedJSON(http.StatusOK, json)
-	}
+	sendResponseOrError(ctx, json, err)
 }
 
 func getScraperState(ctx *gin.Context) {
 	json, err := controller.GetScraperState()
-	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.IndentedJSON(http.StatusOK, json)
-	}	
+	sendResponseOrError(ctx, json, err)
 }
 
 func (deps *Depends) findProducts(ctx *gin.Context) {
@@ -65,45 +65,25 @@ func (deps *Depends) findProducts(ctx *gin.Context) {
 	var search_text string = query.Get("search_text")
 
 	products, err := controller.FindProductInDb(deps.Database, search_text)
-	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.IndentedJSON(http.StatusOK, products)
-	}
+	sendResponseOrError(ctx, products, err)
 }
 
 func (deps *Depends) getProducts(ctx *gin.Context) {
 	products, err := controller.GetProductsFromDb(deps.Database)
-	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.IndentedJSON(http.StatusOK, products)
-	}
+	sendResponseOrError(ctx, products, err)
 }
 
 func (deps *Depends) getProductById(ctx *gin.Context) {
 	product, err := controller.GetProductById(deps.Database, ctx.Query("id"))
-	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.IndentedJSON(http.StatusOK, product)
-	}
+	sendResponseOrError(ctx, product, err)
 }
 
 func (deps *Depends) getScrapeErrors(ctx *gin.Context) {
 	errors, err := controller.GetScrapeErrorsFromDb(deps.Database)
-	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.IndentedJSON(http.StatusOK, errors)
-	}
+	sendResponseOrError(ctx, errors, err)
 }
 
 func (deps *Depends) getProductsByStoreName(ctx *gin.Context) {
-	errors, err := controller.GetProductsByStore(deps.Database, ctx.Query("store"))
-	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.IndentedJSON(http.StatusOK, errors)
-	}
+	products, err := controller.GetProductsByStore(deps.Database, ctx.Query("store"))
+	sendResponseOrError(ctx, products, err)
 }

@@ -27,9 +27,8 @@ impl SimpleRateLimiter {
     }
 
     async fn run_one<T>(&self, future: impl Future<Output = T> + Send + Sync) -> Result<T> {
-        let permit = self.semaphore.acquire().await?;
+        let _permit = self.semaphore.acquire().await?;
         let future_result = future.await;
-        drop(permit);
         Ok(future_result)
     }
 }
