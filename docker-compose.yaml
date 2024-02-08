@@ -9,23 +9,22 @@ services:
       POSTGRES_USER: postgresuser
       POSTGRES_PASSWORD: postgrespwd
       POSTGRES_DB: supermarkt
-    ports:
-      - 5432:5432
   func:
     container_name: supermarkt-func
     build: ./scrape
-    ports:
-      - 7071:7071
     depends_on:
       - db
     environment:
       - CONN_URL=postgres://postgresuser:postgrespwd@supermarkt-db:5432/supermarkt
-  # api:
-  #   container_name: supermarkt-api
-  #   build: ./api
-  #   ports:
-  #     - 8080:8080
-  #   volumes:
-  #     - ./api:/app
-  #   depends_on:
-  #     - db
+  api:
+    container_name: supermarkt-api
+    build: ./api
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+    environment:
+      - CONN_URL=postgres://postgresuser:postgrespwd@supermarkt-db:5432/supermarkt
+      - SCRAPER_URL=http://supermarkt-func:7071
+      - API_SECRET=yoursecretstring
+      - TOKEN_HOUR_LIFESPAN=1

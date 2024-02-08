@@ -12,12 +12,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load(".env")
-
-	if err != nil {
-		log.Fatalf("Error loading .env file")
-	}	
-
+	godotenv.Load(".env")
     router := gin.Default()
 
 	database := db.ConnectDb()
@@ -32,7 +27,7 @@ func main() {
 	v1.Add(router, deps)
 	auth.Add(router, deps)
 	
-    router.Run("localhost:8080")
+    router.Run("0.0.0.0:8080")
 }
 
 func healthCheck(ctx *gin.Context) {

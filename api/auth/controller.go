@@ -40,7 +40,7 @@ func saveUser(user models.User, db *gorm.DB) (*models.User, error) {
 }
 
 
-func VerifyPassword(password,hashedPassword string) error {
+func VerifyPassword(password, hashedPassword string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
@@ -61,10 +61,10 @@ func loginCheck(email string, password string, db *gorm.DB) (string, error) {
 		return "", err
 	}
 
-	token,err := GenerateToken(user.ID)
+	token, err := GenerateToken(user.ID)
 
 	if err != nil {
-		return "",err
+		return "", err
 	}
 
 	return token,nil

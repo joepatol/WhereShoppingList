@@ -3,20 +3,23 @@ package db
 import (
 	"fmt"
 	"os"
-	"gorm.io/gorm"
+	"time"
+
 	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 const CONN_URL = "postgres://postgresuser:postgrespwd@localhost:5432/supermarkt";
 
 func ConnectDb() *gorm.DB {
-	connString := os.Getenv("CONN_URL")
+	time.Sleep(5 * time.Second) // Wait for db startup
+	connString, found := os.LookupEnv("CONN_URL")
 
-	if connString == "" {
+	if !found {
 		connString = CONN_URL
 	}
 
-	db, err := gorm.Open(postgres.Open(CONN_URL), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(connString), &gorm.Config{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)

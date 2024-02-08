@@ -1,0 +1,12 @@
+go 1.21.6
+
+use (
+    ./
+    ./db
+    ./models
+    ./core
+    ./auth
+    ./v1
+    ./v1/dto
+    ./v1/controller
+)

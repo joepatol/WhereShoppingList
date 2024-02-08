@@ -4,15 +4,24 @@ import (
 	"bytes"
 	"net/http"
 	"dto"
+	"os"
 	"encoding/json"
 )
 
-const START_SCRAPE_URL string = "http://localhost:7071/scrape_func"
-const SCRAPE_STATE_URL string = "http://localhost:7071/status"
-const SCRAPE_HEALTH_URL string = "http://localhost:7071/health_check"
+const SCRAPER_URL string =  "http://localhost:7071"
+
+func scraperUrl() string {
+	connString, found := os.LookupEnv("SCRAPER_URL")
+
+	if !found {
+		connString = SCRAPER_URL
+	}
+
+	return connString
+}
 
 func GetScraperHealthCheck() (*dto.ScraperHealth, error) {
-	resp, err := http.Get(SCRAPE_HEALTH_URL)
+	resp, err := http.Get(scraperUrl() + "/health_check")
 	if err != nil { return nil, err }
 	defer resp.Body.Close()
 	var dto dto.ScraperHealth;
@@ -22,7 +31,7 @@ func GetScraperHealthCheck() (*dto.ScraperHealth, error) {
 }
 
 func GetScraperState() (*dto.ScraperState, error) {
-	resp, err := http.Get(SCRAPE_STATE_URL)
+	resp, err := http.Get(scraperUrl() + "/status")
 	if err != nil { return nil, err }
 	defer resp.Body.Close()
 	var dto dto.ScraperState;
@@ -32,7 +41,7 @@ func GetScraperState() (*dto.ScraperState, error) {
 }
 
 func StartScraper() (*dto.ScraperState, error) {
-	resp, err := http.Post(START_SCRAPE_URL, "application/json", bytes.NewBuffer([]byte("")))
+	resp, err := http.Post(scraperUrl() + "/scrape_func", "application/json", bytes.NewBuffer([]byte("")))
 	if err != nil { return nil, err }
 	defer resp.Body.Close()
 	var dto dto.ScraperState;

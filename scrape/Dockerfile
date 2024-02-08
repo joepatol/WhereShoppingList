@@ -12,5 +12,4 @@ FROM rust:1.75.0-alpine
 WORKDIR /opt/func
 COPY --from=builder /func/scraper/target/release/scraper .
 
-EXPOSE 7071
 CMD ["./scraper"]
