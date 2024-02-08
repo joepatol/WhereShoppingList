@@ -13,7 +13,7 @@ type Depends core.Depends
 func Add(base gin.IRouter, cdeps core.Depends) {
     router := base.Group("v1")
 	router.Use(auth.JwtAuthMiddleware())
-	deps := Depends { cdeps.Database, cdeps.Logger }
+	deps := Depends(cdeps)
 
     router.GET("/all_products", deps.getProducts)
 	router.GET("/product", deps.getProductById)

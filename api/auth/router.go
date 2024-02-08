@@ -12,7 +12,7 @@ type Depends core.Depends
 
 func Add(base gin.IRouter, cdeps core.Depends) {
 	router := base.Group("/auth")
-	deps := Depends { cdeps.Database, cdeps.Logger }
+	deps := Depends(cdeps)
 
 	router.POST("/register", deps.Register)
 	router.POST("/login", deps.Login)
