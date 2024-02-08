@@ -3,10 +3,7 @@ use futures::future::join_all;
 use rand::Rng;
 use anyhow::Result;
 use tokio::sync::Semaphore;
-
-pub trait RateLimiter {
-    fn run<T: Send + Sync>(&self, futures: Vec<impl Future<Output = T> + Send + Sync>) -> impl Future<Output = Vec<Result<T>>> + Send + Sync;
-}
+use super::AsyncExecutor;
 
 pub struct SimpleRateLimiter {
     semaphore: Semaphore,
@@ -33,7 +30,7 @@ impl SimpleRateLimiter {
     }
 }
 
-impl RateLimiter for SimpleRateLimiter {
+impl AsyncExecutor for SimpleRateLimiter {
     async fn run<T>(&self, futures: Vec<impl Future<Output = T> + Send + Sync>) -> Vec<Result<T>> {
         join_all(
             futures
@@ -73,7 +70,7 @@ impl RandomDelayRateLimiter {
     }
 }
 
-impl RateLimiter for RandomDelayRateLimiter {
+impl AsyncExecutor for RandomDelayRateLimiter {
     async fn run<T>(&self, futures: Vec<impl Future<Output = T> + Send + Sync>) -> Vec<Result<T>> {
         join_all(
             futures

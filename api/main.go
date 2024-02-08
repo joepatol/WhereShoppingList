@@ -10,22 +10,6 @@ import (
 	"gorm.io/gorm"
 )
 
-
-// Dependency injection
-type Depends struct {
-	Database *gorm.DB
-	Logger *log.Logger
-}
-
-// Helpers
-func sendResponseOrError (ctx *gin.Context, obj any, err error) {
-	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
-	} else {
-		ctx.IndentedJSON(http.StatusOK, obj)
-	}
-}
-
 func main() {
     router := gin.Default()
 	deps := Depends{ 
@@ -42,6 +26,21 @@ func main() {
 	router.GET("/scrape_errors", deps.getScrapeErrors)
 	router.GET("/store", deps.getProductsByStoreName)
     router.Run("localhost:8080")
+}
+
+// Dependency injection
+type Depends struct {
+	Database *gorm.DB
+	Logger *log.Logger
+}
+
+// Helpers
+func sendResponseOrError (ctx *gin.Context, obj any, err error) {
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, err.Error())
+	} else {
+		ctx.IndentedJSON(http.StatusOK, obj)
+	}
 }
 
 // Route handlers

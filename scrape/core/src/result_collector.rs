@@ -1,18 +1,21 @@
 use std::iter::FromIterator;
 use std::future::Future;
-use super::RateLimiter;
+use super::AsyncExecutor;
 use anyhow::Result;
 
 pub trait Transform<T: Send + Sync, I: Send + Sync> {
-    fn transform(self, func: impl Fn(T) -> Result<I, anyhow::Error>) -> ResultCollector<I>;
+    type Collected: Send + Sync;
+    fn transform(self, func: impl Fn(T) -> I) -> ResultCollector<Self::Collected>;
 }
 
-pub trait AsyncTransform<T: Send + Sync, I: Send + Sync> {
-    fn transform_async<F, R>(self, func: impl Fn(T) -> F + Send + Sync, rate_limiter: &R) -> impl Future<Output = ResultCollector<I>> + Send + Sync
-    where
-        F: Future<Output = Result<I, anyhow::Error>> + Send + Sync,
-        R: RateLimiter + Send + Sync,
-    ;
+pub trait AsyncTransform<InputT, ResolvedOutT, FutureOutT> 
+where
+    InputT: Send + Sync,
+    ResolvedOutT: Send + Sync,
+    FutureOutT: Future<Output = ResolvedOutT> + Send + Sync,
+{
+    type Collected: Send + Sync;
+    fn transform_async<R: AsyncExecutor + Send + Sync>(self, func: impl Fn(InputT) -> FutureOutT + Send + Sync, executor: &R) -> impl Future<Output = ResultCollector<Self::Collected>> + Send + Sync;
 }
 
 /// Collect results of operations that return an `anyhow::Result<T>`.
@@ -185,11 +188,11 @@ impl<T: Send + Sync> From<Vec<T>> for ResultCollector<T> {
     }
 }
 
-impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<T> {
+impl<T: Send + Sync, I: Send + Sync> Transform<T, Result<I, anyhow::Error>> for ResultCollector<T> {
+    type Collected = I;
+
     /// Transform all success elements of this collector using a closure. Turning
     /// this `ResultCollector<T>` into `ResultCollector<I>`
-    /// The closure is expected to return a `Result`, each error will be collected into the 
-    /// errors `Vec`, `Ok` variants are pushed to the successes vec
     /// 
     /// # Example
     /// ```
@@ -209,25 +212,30 @@ impl<T: Send + Sync, I: Send + Sync> Transform<T, I> for ResultCollector<T> {
     /// assert_eq!(transformed.list_error_messages(), vec!["fail".to_owned()]);
     /// assert_eq!(transformed.successes, Vec::<&str>::default());
     /// ```
-    fn transform(self, func: impl Fn(T) -> Result<I, anyhow::Error>) -> ResultCollector<I> {
+    fn transform(self, func: impl Fn(T) -> Result<I, anyhow::Error>) -> ResultCollector<Self::Collected> {
         let mut results: ResultCollector<I> = self.successes.into_iter().map(|inp| (func)(inp)).collect();
         results.errors.extend(self.errors);
         results
     }
 }
 
-impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T> {
+impl
+<  
+    F: Future<Output = Result<I, anyhow::Error>> + Send + Sync,
+    I: Send + Sync,
+    T: Send + Sync,
+> 
+AsyncTransform<T, Result<I, anyhow::Error>, F> for ResultCollector<T> 
+{
+    type Collected = I;
+
     /// Transform this `ResultCollector<T>` into `ResultCollector<I>` using a
-    /// closure that returns a future.
+    /// closure that returns a future. The future should resolve to a `Result<I>`
     /// 
-    /// Ratelimiter is used to expose control over the execution of the futures. E.g. to limit the
+    /// AsyncExecutor is used to expose control over the execution of the futures. E.g. to limit the
     /// number of concurrent requests.
-    async fn transform_async<F, R>(self, func: impl Fn(T) -> F, rate_limiter: &R) -> ResultCollector<I>
-    where
-        F: Future<Output = Result<I, anyhow::Error>> + Send + Sync,
-        R: RateLimiter + Send + Sync, 
-    {
-        let mut results: ResultCollector<I> = rate_limiter
+    async fn transform_async<R: AsyncExecutor + Send + Sync>(self, func: impl Fn(T) -> F, executor: &R) -> ResultCollector<Self::Collected> {
+        let mut results: ResultCollector<I> = executor
             .run(
             self.successes
                 .into_iter()
@@ -241,6 +249,41 @@ impl<T: Send + Sync, I: Send + Sync> AsyncTransform<T, I> for ResultCollector<T>
 
         results.errors.extend(self.errors);
         results
+    }
+}
+
+impl
+<  
+    F: Future<Output = ResultCollector<I>> + Send + Sync,
+    I: Send + Sync,
+    T: Send + Sync,
+> 
+AsyncTransform<T, ResultCollector<I>, F> for ResultCollector<T> {
+    type Collected = I;
+
+    /// Transform this `ResultCollector<T>` into `ResultCollector<I>` using a
+    /// closure that returns a future. The future should resolve to a `ResultCollector<I>`
+    /// 
+    /// AsyncExecutor is used to expose control over the execution of the futures. E.g. to limit the
+    /// number of concurrent requests.
+    async fn transform_async<R: AsyncExecutor + Send + Sync>(self, func: impl Fn(T) -> F + Send + Sync, executor: &R) -> ResultCollector<Self::Collected> {
+        let mut new_collector = ResultCollector::new();
+        let results = executor
+            .run(
+            self.successes
+                .into_iter()
+                .map(|inp| (func)(inp) )
+                .collect()
+            )
+            .await;
+
+        for result in results.into_iter() {
+            match result {
+                Ok(coll) => new_collector.extend(coll),
+                Err(e) => new_collector.errors.push(e),
+            };
+        }
+        new_collector
     }
 }
 
@@ -258,11 +301,24 @@ mod tests {
         Ok(vec![val, val + 1])
     }
 
-    async fn test_async_fn(val: i32) -> Result<Vec<i32>> {
+    async fn test_async_returns_result(val: i32) -> Result<Vec<i32>> {
         if val <= 0 {
             return Err(anyhow!("{}", val));
         };
         Ok(vec![val, val + 1])
+    }
+
+    async fn test_async_return_result_collector(val: i32) -> ResultCollector<i32> {
+        ResultCollector::from(vec![val + 1])
+    }
+
+    #[tokio::test]
+    async fn test_transform_async_result_collector() {
+        let rate_limiter = SimpleRateLimiter::default();
+        let collector = ResultCollector::from(vec![1, 2, 3]);
+        let result = collector.transform_async(|v| test_async_return_result_collector(v), &rate_limiter).await;
+
+        assert_eq!(result.successes, vec![2, 3, 4]);
     }
 
     #[test]
@@ -275,7 +331,7 @@ mod tests {
     async fn test_transform_async() {
         let rate_limiter = SimpleRateLimiter::new(None);
         let collector = ResultCollector::from(vec![-1, 0, 1, 3]);
-        let result = collector.transform_async(|e| test_async_fn(e), &rate_limiter).await.flatten();
+        let result = collector.transform_async(|e| test_async_returns_result(e), &rate_limiter).await.flatten();
         assert_eq!(result.successes, vec![1, 2, 3, 4]);
         assert_eq!(result.list_error_messages(), vec!["-1".to_owned(), "0".to_owned()]);
     }

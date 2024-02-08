@@ -1,6 +1,6 @@
 use anyhow::Result;
 use log::info;
-use scrape_core::{HtmlLoader, ProductInfo, RateLimiter, ResultCollector, AsyncTransform, Scraper};
+use scrape_core::{HtmlLoader, ProductInfo, AsyncExecutor, ResultCollector, AsyncTransform, Scraper};
 use scrape_core::scrape_utils::build_selector;
 use super::parse::{get_name, get_price, get_nr_pages, get_product_url};
 
@@ -46,15 +46,8 @@ impl<'a, T: HtmlLoader + Send + Sync> JumboScraper<'a, T> {
 }
 
 impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
-    async fn scrape<R: RateLimiter + Send + Sync>(&self, max_requests: Option<usize>, rate_limiter: &R) -> ResultCollector<ProductInfo> {
+    async fn scrape<R: AsyncExecutor + Send + Sync>(&self, rate_limiter: &R) -> ResultCollector<ProductInfo> {
         info!(target: SRC, "Start scraping");
-        let max_nr_requests: usize;
-    
-        match max_requests {
-            Some(value) => max_nr_requests = value,
-            None => max_nr_requests = usize::MAX,
-        };
-        info!("Limited number of requests to {}", &max_nr_requests);
 
         let nr_pages = match self.scrape_nr_pages().await {
             Ok(amt) => amt,
@@ -62,13 +55,9 @@ impl<'a, T: HtmlLoader + Send + Sync> Scraper for JumboScraper<'a, T> {
         };
         info!("Found {} pages", &nr_pages);
 
-        let mut offsets = (0..nr_pages)
+        let offsets = (0..nr_pages)
             .map(|e| (e * PRODUCTS_PER_PAGE).to_string())
             .collect::<Vec<String>>();
-        
-        if offsets.len() > max_nr_requests {
-            offsets = offsets[0..max_nr_requests].iter().cloned().collect();
-        }
 
         ResultCollector::from(offsets)
             .transform_async(|i| self.scrape_page(i), rate_limiter)

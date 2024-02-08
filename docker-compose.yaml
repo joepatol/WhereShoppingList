@@ -11,15 +11,15 @@ services:
       POSTGRES_DB: supermarkt
     ports:
       - 5432:5432
-  # func:
-  #   container_name: supermarkt-func
-  #   build: ./scrape
-  #   ports:
-  #     - 7071:7071
-  #   depends_on:
-  #     - db
-  #   environment:
-  #     - CONN_URL=postgres://postgresuser:postgrespwd@supermarkt-db:5432/supermarkt
+  func:
+    container_name: supermarkt-func
+    build: ./scrape
+    ports:
+      - 7071:7071
+    depends_on:
+      - db
+    environment:
+      - CONN_URL=postgres://postgresuser:postgrespwd@supermarkt-db:5432/supermarkt
   # api:
   #   container_name: supermarkt-api
   #   build: ./api
