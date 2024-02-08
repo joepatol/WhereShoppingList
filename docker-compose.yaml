@@ -23,6 +23,7 @@ services:
       - 8080:8080
     depends_on:
       - db
+      - func
     environment:
       - CONN_URL=postgres://postgresuser:postgrespwd@supermarkt-db:5432/supermarkt
       - SCRAPER_URL=http://supermarkt-func:7071
