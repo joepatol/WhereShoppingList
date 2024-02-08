@@ -2,8 +2,11 @@ go 1.21.6
 
 use (
     ./api/
-    ./api/controller
     ./api/db
-    ./api/dto
     ./api/models
+    ./api/core
+    ./api/auth
+    ./api/v1
+    ./api/v1/dto
+    ./api/v1/controller
 )
