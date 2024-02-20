@@ -1,10 +1,11 @@
 package auth
 
 import (
-	"models"
 	"errors"
-	"gorm.io/gorm"
+	"models"
+
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 func GetUserById(id uint, db *gorm.DB) (*models.User, error) {

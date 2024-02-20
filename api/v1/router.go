@@ -28,10 +28,17 @@ func Add(base gin.IRouter, cdeps core.Depends) {
 	router.GET("/store", deps.getProductsByStoreName)
 	router.POST("/shopping_list", deps.createShoppingList)
 	router.GET("/shopping_list", deps.getShoppingListById)
+	router.GET("/all_shopping_lists", deps.getAllShoppingLists)
+}
+
+func (deps *Depends) getAllShoppingLists(ctx *gin.Context) {
+	lists, err := controller.GetAllShoppingLists(deps.Database)
+	core.SendResponseOrError(ctx, lists, err)
 }
 
 func (deps *Depends) getShoppingListById(ctx *gin.Context) {
-	id, err := strconv.ParseUint(ctx.Query("id"), 10, 32)
+	id, err := strconv.ParseUint(ctx.Query("id"), 10, 64)
+	
 	if err != nil {
 		deps.Logger.Println("Not a valid id value: ", err.Error())
 		ctx.AbortWithStatus(http.StatusBadRequest)

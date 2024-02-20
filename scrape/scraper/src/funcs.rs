@@ -23,7 +23,7 @@ pub async fn scrape(config: ScrapeConfig) -> Result<()> {
     let pool = sql::connect().await?;
     info!("Using configuration: {:?}", &config);
     info!("Clearing tables");
-    tables::truncate_all(&pool).await?;
+    // tables::truncate_all(&pool).await?;  TODO: Can't truncate table with foreign key constraint, products - shopping lists relation
     info!("Scraping...");
     run_scrapers(&config, &pool).await?;
     info!("All done");

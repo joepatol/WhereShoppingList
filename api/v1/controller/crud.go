@@ -86,6 +86,7 @@ func CreateShoppingList(db *gorm.DB, ownerId uint, name string, productsIds []ui
 
 	var shoppingList = models.ShoppingList{
 		Owner: user,
+		UserID: user.ID,
 		Name: name,
 		Products: products,
 	}
@@ -97,10 +98,20 @@ func CreateShoppingList(db *gorm.DB, ownerId uint, name string, productsIds []ui
 	return &shoppingList.ID, nil
 }
 
+func GetAllShoppingLists(db *gorm.DB) ([]models.ShoppingList, error) {
+	var shoppingLists []models.ShoppingList
+
+	if err := db.Preload("Owner").Find(&shoppingLists).Error; err != nil {
+		return nil, err
+	}
+
+	return shoppingLists, nil
+}
+
 func GetShoppingListById(db *gorm.DB, id uint64) (*dto.ShoppingList, error) {
 	var shoppingList models.ShoppingList
 
-	if err := db.First(&shoppingList, id).Error; err != nil {
+	if err := db.Preload("Owner").Preload("Products").First(&shoppingList, id).Error; err != nil {
 		return nil, errors.New("shopping list not found")
 	}
 
@@ -119,9 +130,16 @@ func GetShoppingListById(db *gorm.DB, id uint64) (*dto.ShoppingList, error) {
 		})
 	}
 
+	dtoOwner := auth.User{
+		Id: shoppingList.Owner.ID,
+		Email: shoppingList.Owner.Email,
+		FirstName: shoppingList.Owner.FirstName,
+		LastName: shoppingList.Owner.LastName,
+	}
+
 	dtoList := dto.ShoppingList{
 		ID: shoppingList.ID,
-		Owner: *shoppingList.Owner,
+		Owner: dtoOwner,
 		Name: shoppingList.Name,
 		Products: products,
 		TotalPrice: price,

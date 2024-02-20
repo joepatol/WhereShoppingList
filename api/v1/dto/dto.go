@@ -1,9 +1,11 @@
 package dto
 
-import "models"
+import (
+	"auth"
+)
 
 type Product struct {
-	ID    string  `json:"id"`
+	ID    uint  `json:"id"`
 	Name  string  `json:"name"`
 	Price float32 `json:"price"`
 	Store string  `json:"store"`
@@ -31,8 +33,8 @@ type CreateShoppingListInput struct {
 
 type ShoppingList struct {
 	ID		   uint		   	`json:"id"`
-	Owner      models.User 	`json:"owner"`
+	Owner      auth.User 	`json:"owner"`
 	Name       string      	`json:"name"`
 	Products   []*Product   `json:"products"`
-	TotalPrice float32     `json:"total_price"`
+	TotalPrice float32     	`json:"total_price"`
 }

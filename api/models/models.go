@@ -3,11 +3,12 @@ package models
 import "gorm.io/gorm"
 
 type Product struct {
-	ID        string `gorm:"primarykey"`
-	Name      string
-	Store     string
-	Price     float32
-	Url       string
+	ID        		uint `gorm:"primarykey"`
+	Name      		string
+	Store     		string
+	Price     		float32
+	Url       		string
+	ShoppingLists	[]*ShoppingList `gorm:"many2many:products_shoppinglists"`
 }
 
 type ScrapeError struct {
@@ -26,13 +27,8 @@ type User struct {
 
 type ShoppingList struct {
 	gorm.Model
-	Owner		*User		`json:"owner"`
+	Owner		*User		`gorm:"foreignKey:UserID" json:"owner"`
+	UserID		uint
 	Name		string		`gorm:"size:255;not null" json:"name"`
-	Products	[]*Product	`gorm:"many2many:shopping_list_products" json:"products"`
-}
-
-type ShoppingListProduct struct {
-    gorm.Model
-    ShoppingListID uint
-    ProductID      uint
+	Products	[]*Product	`gorm:"many2many:products_shoppinglists" json:"products"`
 }
