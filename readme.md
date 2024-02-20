@@ -1,6 +1,6 @@
 # Disclaimer
 
-This repo is for me to learn & experiment with new languages & technologies, it is *not* intended for production use.
+This repo is for me to learn & experiment with new languages & technologies, it is *not* intended for any serious scenario.
 
 # Run the application
 
