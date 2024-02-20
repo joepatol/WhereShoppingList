@@ -1,5 +1,5 @@
 # Go Version
-FROM golang:1.21-rc-alpine3.17
+FROM golang:1.21-rc-alpine3.17 AS builder
 
 # Environment variables which CompileDaemon requires to run
 ENV PROJECT_DIR=/app \
@@ -12,13 +12,10 @@ RUN mkdir /app
 COPY .. /app
 WORKDIR /app
 
-# Get CompileDaemon
-# RUN go get github.com/githubnemo/CompileDaemon
-# RUN go install github.com/githubnemo/CompileDaemon
-
 RUN go build -o supermarkt-api
 
-# The build flag sets how to build after a change has been detected in the source code
-# The command flag sets how to run the app after it has been built
-EXPOSE 8080
+FROM golang:1.21-rc-alpine3.17
+COPY --from=builder /app/supermarkt-api /app/supermarkt-api
+WORKDIR /app
+
 CMD ["./supermarkt-api"]

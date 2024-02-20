@@ -7,21 +7,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func getUserById(id uint, db *gorm.DB) (*User, error) {
+func GetUserById(id uint, db *gorm.DB) (*models.User, error) {
 	var user models.User
 
 	if err := db.First(&user, id).Error; err != nil {
 		return nil, errors.New("user not found")
 	}
-	
-	var outUser = User {
-		user.ID,
-		user.Email,
-		user.FirstName,
-		user.LastName,
-	}
 
-	return &outUser, nil
+	return &user, nil
 } 
 
 func saveUser(user models.User, db *gorm.DB) (*models.User, error) {

@@ -8,7 +8,6 @@ type Product struct {
 	Store     string
 	Price     float32
 	Url       string
-	SearchStr string `gorm:"column:searchstr"`
 }
 
 type ScrapeError struct {
@@ -23,4 +22,17 @@ type User struct {
 	LastName  string	`gorm:"size:255;not null;unique" json:"last_name"`
 	Email     string	`gorm:"size:255;not null;unique" json:"email"`
 	Password  string	`gorm:"size:255;not null;unique" json:"password"`
+}
+
+type ShoppingList struct {
+	gorm.Model
+	Owner		*User		`json:"owner"`
+	Name		string		`gorm:"size:255;not null" json:"name"`
+	Products	[]*Product	`gorm:"many2many:shopping_list_products" json:"products"`
+}
+
+type ShoppingListProduct struct {
+    gorm.Model
+    ShoppingListID uint
+    ProductID      uint
 }

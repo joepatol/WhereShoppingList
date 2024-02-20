@@ -1,9 +1,12 @@
 package v1
 
 import (
+	"auth"
 	"controller"
 	"core"
-	"auth"
+	"dto"
+	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,6 +26,45 @@ func Add(base gin.IRouter, cdeps core.Depends) {
 	router.GET("/scraper_state", getScraperState)
 	router.GET("/scrape_errors", deps.getScrapeErrors)
 	router.GET("/store", deps.getProductsByStoreName)
+	router.POST("/shopping_list", deps.createShoppingList)
+	router.GET("/shopping_list", deps.getShoppingListById)
+}
+
+func (deps *Depends) getShoppingListById(ctx *gin.Context) {
+	id, err := strconv.ParseUint(ctx.Query("id"), 10, 32)
+	if err != nil {
+		deps.Logger.Println("Not a valid id value: ", err.Error())
+		ctx.AbortWithStatus(http.StatusBadRequest)
+	}
+
+	shoppingList, err := controller.GetShoppingListById(deps.Database, id)
+	core.SendResponseOrError(ctx, shoppingList, err)
+}
+
+func (deps *Depends) createShoppingList(ctx *gin.Context) {
+	var data dto.CreateShoppingListInput
+
+	if err := ctx.ShouldBindJSON(&data); err != nil {
+		deps.Logger.Println("Bad request data: ", err.Error())
+		ctx.AbortWithStatus(http.StatusBadRequest)
+	}
+
+	shoppingListId, err := controller.CreateShoppingList(
+		deps.Database,
+		data.OwnerId,
+		data.Name,
+		data.ProductIds,
+	)
+
+	if err != nil { 
+		deps.Logger.Println("Failed to create shopping list: ", err.Error())
+		ctx.AbortWithStatus(http.StatusInternalServerError) 
+	}
+
+	ctx.IndentedJSON(http.StatusOK, gin.H{
+		"status": "created",
+		"id": shoppingListId,
+	})
 }
 
 func getScraperHealth(ctx *gin.Context) {

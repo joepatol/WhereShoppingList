@@ -28,7 +28,7 @@ func (deps *Depends) GetUser(ctx *gin.Context) {
 		return
 	}
 
-	user, err := getUserById(userId, deps.Database)
+	user, err := GetUserById(userId, deps.Database)
 
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})

@@ -28,19 +28,14 @@ fn get_rand_user_agent() -> &'static str {
 async fn get_html_document_from_url(client: &reqwest::Client, url: String) -> Result<scraper::Html> {
     // Fetch a html document using a client
     let user_agent = get_rand_user_agent();
-    let req = client
+    let html_content = client
         .get(&url)
         .header(USER_AGENT, user_agent)
         .header(ACCEPT_LANGUAGE, "en-US,en;q=0.5" )
         .header(REFERER, "https://google.com/")
-        .header(ACCEPT_ENCODING, "gzip, deflate, br");
-
-    let response = 
-        req
+        .header(ACCEPT_ENCODING, "gzip, deflate, br")
         .send()
-        .await;
-
-    let html_content = response
+        .await
         .map_err(|e| ScrapeError::FailedToConnect { url: url.clone(), err: e.to_string() })?
         .text()
         .await

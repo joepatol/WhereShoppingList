@@ -1,0 +1,11 @@
+version: '3.9'
+services:
+  db:
+    container_name: supermarkt-db
+    build: ./db
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgresuser
+      POSTGRES_PASSWORD: postgrespwd
+      POSTGRES_DB: supermarkt
